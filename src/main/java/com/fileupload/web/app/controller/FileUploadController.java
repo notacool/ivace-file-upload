@@ -8,17 +8,21 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.ItemIterable;
+import org.apache.chemistry.opencmis.client.api.Property;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.api.SessionFactory;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
+import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
@@ -38,14 +42,12 @@ import org.springframework.web.servlet.ModelAndView;
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
 
-import org.alfresco.service.cmr.repository.NodeRef;
-
 @Controller
 public class FileUploadController {
 
 	@Autowired
 	CredentialsRepository credRepo;
-	
+
 	@Value("${alfresco.user}")
 	private String user;
 	@Value("${alfresco.pass}")
@@ -53,70 +55,32 @@ public class FileUploadController {
 	@Value("${alfresco.url}")
 	private String url;
 
-	@GetMapping("/pruebaJose")
-	public ModelAndView pruebaJose() {
-
-		TCredentials cred = credRepo.checkCredentials("111", "222");
-		ModelAndView view = new ModelAndView("prueba");
-		if (cred == null) {
-			view.addObject("valor", "CREDENCIALES ERRONEAS");
-		} else {
-			view.addObject("valor", "PERFECTO");
-		}
-		return view;
-	}
-	
-	
-	@PostMapping("/upload")
-    public String uploadFile(@RequestParam("file") MultipartFile file,
-                             @RequestParam("customMetadata") String customMetadata) {
-        try {
-            // Connect to Alfresco
-            // ...
-
-            // Create a new node with the uploaded file's content
-            NodeRef nodeRef = fileFolderService.create(parentNodeRef, file.getOriginalFilename(), ContentModel.TYPE_CONTENT).getNodeRef();
-            ContentWriter writer = contentService.getWriter(nodeRef, ContentModel.PROP_CONTENT, true);
-            writer.setMimetype(file.getContentType());
-            writer.putContent(file.getInputStream());
-
-            // Add custom metadata to the node
-            Map<QName, Serializable> properties = new HashMap<>();
-            properties.put(QName.createQName("{namespace}customMetadata"), customMetadata);
-            nodeService.addProperties(nodeRef, properties);
-
-            return "File uploaded successfully!";
-        } catch (IOException e) {
-            return "Error uploading file: " + e.getMessage();
-        }
-    }
-
-	
-
 	@PostMapping("/uploadFile")
 	@ResponseBody
 	public Boolean uploadToAlfresco(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass, @RequestParam("file") MultipartFile file, String folder, int gustavoId, int ulisesId) {
+			@RequestHeader("clientPass") String clientPass, @RequestParam("file") MultipartFile file, String folder,
+			int gustavoId, int ulisesId) {
 		try {
 			TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 			if (cred == null) {
 				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
 			}
-			//if(gustavoId == null) gustavoId = 0;
-			//if(ulisesId == null) ulisesId = 0;
-			
+			// if(gustavoId == null) gustavoId = 0;
+			// if(ulisesId == null) ulisesId = 0;
+
 			byte[] fileContent = file.getBytes();
 			Boolean fileExists = false;
 
 			// Configuraciones básicas para para conectarse
 			SessionFactory factory = SessionFactoryImpl.newInstance();
 			Map<String, String> parameter = new HashMap<String, String>();
-			
+
 			// Credenciales del usuario y url de conexión
 			parameter.put(SessionParameter.USER, user);
 			parameter.put(SessionParameter.PASSWORD, pass);
 			parameter.put(SessionParameter.ATOMPUB_URL, url);
 			parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+			
 
 			// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
 			Session session = factory.getRepositories(parameter).get(0).createSession();
@@ -150,23 +114,20 @@ public class FileUploadController {
 			}
 
 			// Si el archivo no existe en ese directorio lo creamos.
-			Map<String, Object> properties2 = new HashMap<String, Object>();
+			Map<String, String> properties2 = new HashMap<String, String>();
 			properties2.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
 			properties2.put(PropertyIds.NAME, file.getOriginalFilename());
-			
-			//properties2.put(QName.createQName("http://www.somceCo.cz/org/model/content/1.0", "my_property"), "My value"); 
-
-			
-			//DE ESTA FORMA SE CREAN METADATOS PERO POR ALGUNA RAZON FALLA
-			//properties2.put("iv:gustavoId", "112");
-			//properties2.put("iv:ulisesId", "333");
-
+			properties2.put("cm:description", "AAA");
+									
 			InputStream stream = new ByteArrayInputStream(fileContent);
 			ContentStream contentStream = new ContentStreamImpl(file.getOriginalFilename(),
 					BigInteger.valueOf(fileContent.length), "text/plain", stream);
 
 			// Creamos el documento en el Alfresco
-			parent.createDocument(properties2, contentStream, VersioningState.MAJOR);
+			Document a = parent.createDocument(properties2, contentStream, VersioningState.MAJOR);
+			
+		
+						
 			System.out.println("DONE.");
 			return true;
 		} catch (Exception e) {
@@ -175,8 +136,7 @@ public class FileUploadController {
 			return false;
 		}
 	}
-	
-	
+
 	@GetMapping("/getByGustavo")
 	@ResponseBody
 	public Boolean getByGustavoId(@RequestHeader("clientID") String clientID,
@@ -185,10 +145,55 @@ public class FileUploadController {
 		if (cred == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
 		}
-		
-		return false;
+
+		SessionFactory factory = SessionFactoryImpl.newInstance();
+		Map<String, String> parameter = new HashMap<String, String>();
+
+		// Credenciales del usuario y url de conexión
+		parameter.put(SessionParameter.USER, user);
+		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+
+		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+		Session session = factory.getRepositories(parameter).get(0).createSession();
+		Folder root = session.getRootFolder();
+
+		for (CmisObject r : root.getChildren()) {
+			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+				System.out.println("FOLDER: "+r.getName());
+				Folder folder = (Folder) r;
+				for (CmisObject child : folder.getChildren()) {					
+					if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+						System.out.println(child.getName());
+						//getContent(child);
+					}else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
+						System.out.println(child.getProperties());
+					}
+				}
+				System.out.println("------");
+			}
+		}
+		return true;
 	}
 	
+	public void getContent(CmisObject r) {
+		if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+			System.out.println("FOLDER: "+r.getName());
+			Folder folder = (Folder) r;
+			for (CmisObject child : folder.getChildren()) {					
+				if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+					System.out.println(child.getName());
+					getContent(child);
+				}else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
+					//System.out.println("- " + child.getChangeToken());
+					System.out.println(" - " + child.getCreatedBy());
+				}
+			}
+			System.out.println("------");
+		}
+	}
+
 	@GetMapping("/getByUlises")
 	@ResponseBody
 	public Boolean getByUlisesId(@RequestHeader("clientID") String clientID,
@@ -197,11 +202,9 @@ public class FileUploadController {
 		if (cred == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
 		}
-		
+
 		return false;
 	}
-	
-		
 
 	public Folder createFolder(String folderName, Folder root) {
 		Boolean folderExists = false;
@@ -222,4 +225,17 @@ public class FileUploadController {
 
 		return parent;
 	}
+
+	public void search(File folder) {
+		File[] files = folder.listFiles();
+		System.out.println(folder);
+		for (File file : files) {
+			if (file.isDirectory()) {
+				search(file);
+			} else if (file.getName().equals("jose.txt")) {
+				System.out.println("Found file: " + file.getAbsolutePath());
+			}
+		}
+	}
+
 }
