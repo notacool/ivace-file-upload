@@ -158,42 +158,6 @@ public class FileUploadController {
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
 		Session session = factory.getRepositories(parameter).get(0).createSession();
 		Folder root = session.getRootFolder();
-<<<<<<< HEAD
-
-		for (CmisObject r : root.getChildren()) {
-			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-				System.out.println("FOLDER: "+r.getName());
-				Folder folder = (Folder) r;
-				for (CmisObject child : folder.getChildren()) {					
-					if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-						System.out.println(child.getName());
-						//getContent(child);
-					}else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
-						System.out.println(child.getProperties());
-					}
-				}
-				System.out.println("------");
-			}
-		}
-		return true;
-	}
-	
-	public void getContent(CmisObject r) {
-		if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-			System.out.println("FOLDER: "+r.getName());
-			Folder folder = (Folder) r;
-			for (CmisObject child : folder.getChildren()) {					
-				if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-					System.out.println(child.getName());
-					getContent(child);
-				}else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
-					//System.out.println("- " + child.getChangeToken());
-					System.out.println(" - " + child.getCreatedBy());
-				}
-			}
-			System.out.println("------");
-		}
-=======
 		String fileId = "";
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
@@ -220,7 +184,6 @@ public class FileUploadController {
 			}
 		}
 		return "Not found";
->>>>>>> 7350ffc4dea0ad2c6d5ae48605d1ad0b4c2fc3a8
 	}
 
 	@GetMapping("/getByUlises")
@@ -232,9 +195,6 @@ public class FileUploadController {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
 		}
 
-<<<<<<< HEAD
-		return false;
-=======
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 
@@ -254,7 +214,6 @@ public class FileUploadController {
 			}
 		}
 		return fileId;
->>>>>>> 7350ffc4dea0ad2c6d5ae48605d1ad0b4c2fc3a8
 	}
 
 	public Folder createFolder(String folderName, Folder root) {
@@ -277,19 +236,4 @@ public class FileUploadController {
 		return parent;
 	}
 
-<<<<<<< HEAD
-	public void search(File folder) {
-		File[] files = folder.listFiles();
-		System.out.println(folder);
-		for (File file : files) {
-			if (file.isDirectory()) {
-				search(file);
-			} else if (file.getName().equals("jose.txt")) {
-				System.out.println("Found file: " + file.getAbsolutePath());
-			}
-		}
-	}
-
-=======
->>>>>>> 7350ffc4dea0ad2c6d5ae48605d1ad0b4c2fc3a8
 }
