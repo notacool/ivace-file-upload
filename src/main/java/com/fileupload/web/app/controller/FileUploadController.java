@@ -26,6 +26,7 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
+import org.hibernate.internal.build.AllowSysOut;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -117,17 +118,16 @@ public class FileUploadController {
 			Map<String, String> properties2 = new HashMap<String, String>();
 			properties2.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
 			properties2.put(PropertyIds.NAME, file.getOriginalFilename());
-			properties2.put("cm:description", "AAA");
-									
+			properties2.put(PropertyIds.DESCRIPTION, gustavoId + "&&&" + ulisesId);
+
 			InputStream stream = new ByteArrayInputStream(fileContent);
 			ContentStream contentStream = new ContentStreamImpl(file.getOriginalFilename(),
 					BigInteger.valueOf(fileContent.length), "text/plain", stream);
 
 			// Creamos el documento en el Alfresco
-			Document a = parent.createDocument(properties2, contentStream, VersioningState.MAJOR);
-			
-		
-						
+
+			parent.createDocument(properties2, contentStream, VersioningState.MAJOR);			
+
 			System.out.println("DONE.");
 			return true;
 		} catch (Exception e) {
@@ -139,7 +139,7 @@ public class FileUploadController {
 
 	@GetMapping("/getByGustavo")
 	@ResponseBody
-	public Boolean getByGustavoId(@RequestHeader("clientID") String clientID,
+	public String getByGustavoId(@RequestHeader("clientID") String clientID,
 			@RequestHeader("clientPass") String clientPass, int gustavoId) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		if (cred == null) {
@@ -158,6 +158,7 @@ public class FileUploadController {
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
 		Session session = factory.getRepositories(parameter).get(0).createSession();
 		Folder root = session.getRootFolder();
+<<<<<<< HEAD
 
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
@@ -192,18 +193,68 @@ public class FileUploadController {
 			}
 			System.out.println("------");
 		}
+=======
+		String fileId = "";
+		for (CmisObject r : root.getChildren()) {
+			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+				fileId = find((Folder) r, gustavoId, 0);
+			}
+		}
+		return fileId;
+	}
+
+	public String find(Folder r, int gustavoId, int type) {
+		Folder folder = (Folder) r;
+		for (CmisObject child : folder.getChildren()) {
+			if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+				find((Folder) child, gustavoId, type);
+			} else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
+				// SEPARAMOS LA DESCRIPCION COGIENDO LA PRIMERA PARTE
+				if (child.getDescription() != null) {
+					System.out.println(child.getDescription());
+					if (child.getDescription().split("&&&")[type].equals(gustavoId + "")) {
+						System.out.println("aaaaa");
+						return child.getId();
+					}
+				}
+			}
+		}
+		return "Not found";
+>>>>>>> 7350ffc4dea0ad2c6d5ae48605d1ad0b4c2fc3a8
 	}
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
-	public Boolean getByUlisesId(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass, int ulisesId) {
+	public String getByUlisesId(@RequestHeader("clientID") String clientID,
+			@RequestHeader("clientPass") String clientPass, int ulisesID) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		if (cred == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
 		}
 
+<<<<<<< HEAD
 		return false;
+=======
+		SessionFactory factory = SessionFactoryImpl.newInstance();
+		Map<String, String> parameter = new HashMap<String, String>();
+
+		// Credenciales del usuario y url de conexión
+		parameter.put(SessionParameter.USER, user);
+		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+
+		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+		Session session = factory.getRepositories(parameter).get(0).createSession();
+		Folder root = session.getRootFolder();
+		String fileId = "";
+		for (CmisObject r : root.getChildren()) {
+			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+				fileId = find((Folder) r, ulisesID, 1);
+			}
+		}
+		return fileId;
+>>>>>>> 7350ffc4dea0ad2c6d5ae48605d1ad0b4c2fc3a8
 	}
 
 	public Folder createFolder(String folderName, Folder root) {
@@ -226,6 +277,7 @@ public class FileUploadController {
 		return parent;
 	}
 
+<<<<<<< HEAD
 	public void search(File folder) {
 		File[] files = folder.listFiles();
 		System.out.println(folder);
@@ -238,4 +290,6 @@ public class FileUploadController {
 		}
 	}
 
+=======
+>>>>>>> 7350ffc4dea0ad2c6d5ae48605d1ad0b4c2fc3a8
 }
