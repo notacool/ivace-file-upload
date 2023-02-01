@@ -1,21 +1,13 @@
 package com.fileupload.web.app.controller;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
-import org.apache.chemistry.opencmis.client.api.Document;
 import org.apache.chemistry.opencmis.client.api.Folder;
-import org.apache.chemistry.opencmis.client.api.ItemIterable;
-import org.apache.chemistry.opencmis.client.api.Property;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.api.SessionFactory;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
@@ -26,10 +18,10 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
-import org.hibernate.internal.build.AllowSysOut;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.ModelAndView;
 
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
@@ -139,7 +130,7 @@ public class FileUploadController {
 
 	@GetMapping("/getByGustavo")
 	@ResponseBody
-	public String getByGustavoId(@RequestHeader("clientID") String clientID,
+	public ResponseEntity<String> getByGustavoId(@RequestHeader("clientID") String clientID,
 			@RequestHeader("clientPass") String clientPass, int gustavoId) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		if (cred == null) {
@@ -162,9 +153,11 @@ public class FileUploadController {
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
 				fileId = find((Folder) r, gustavoId, 0);
+				if(!fileId.equals("")) return new ResponseEntity<>(fileId, HttpStatus.OK);
 			}
 		}
-		return fileId;
+		if(fileId.equals(""))  return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		else return new ResponseEntity<>(fileId, HttpStatus.OK);
 	}
 
 	public String find(Folder r, int gustavoId, int type) {
@@ -175,20 +168,18 @@ public class FileUploadController {
 			} else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
 				// SEPARAMOS LA DESCRIPCION COGIENDO LA PRIMERA PARTE
 				if (child.getDescription() != null) {
-					System.out.println(child.getDescription());
 					if (child.getDescription().split("&&&")[type].equals(gustavoId + "")) {
-						System.out.println("aaaaa");
 						return child.getId();
 					}
 				}
 			}
 		}
-		return "Not found";
+		return "";
 	}
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
-	public String getByUlisesId(@RequestHeader("clientID") String clientID,
+	public ResponseEntity<String> getByUlisesId(@RequestHeader("clientID") String clientID,
 			@RequestHeader("clientPass") String clientPass, int ulisesID) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		if (cred == null) {
@@ -211,9 +202,13 @@ public class FileUploadController {
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
 				fileId = find((Folder) r, ulisesID, 1);
+				if(!fileId.equals("")) return new ResponseEntity<>(fileId, HttpStatus.OK);
 			}
 		}
-		return fileId;
+		
+		if(fileId.equals(""))  return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		else return new ResponseEntity<>(fileId, HttpStatus.OK);
+		
 	}
 
 	public Folder createFolder(String folderName, Folder root) {
