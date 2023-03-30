@@ -118,15 +118,15 @@ public class FileUploadController {
 			Map<String, String> properties2 = new HashMap<String, String>();
 			properties2.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
 			properties2.put(PropertyIds.NAME, file.getOriginalFilename());
-			properties2.put(PropertyIds.DESCRIPTION, gustavoId + "&&&" + ulisesId);
+			
 
 			InputStream stream = new ByteArrayInputStream(fileContent);
 			ContentStream contentStream = new ContentStreamImpl(file.getOriginalFilename(),
 					BigInteger.valueOf(fileContent.length), "text/plain", stream);
 
 			// Creamos el documento en el Alfresco
-
-			parent.createDocument(properties2, contentStream, VersioningState.MAJOR);			
+			parent.createDocument(properties2, contentStream, VersioningState.MAJOR);		
+			
 
 			System.out.println("DONE.");
 			return true;
