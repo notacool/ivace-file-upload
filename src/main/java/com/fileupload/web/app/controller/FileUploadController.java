@@ -1,8 +1,12 @@
 package com.fileupload.web.app.controller;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,6 +22,8 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
+import org.apache.commons.fileupload.disk.DiskFileItem;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -29,10 +35,19 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.commons.CommonsMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
+
+import es.gob.aapp.libreriaENI.model.documento.ObjetoDocumentoENI;
+import es.gob.aapp.libreriaENI.model.documento.contenido.ObjetoDocumentoContenido;
+import es.gob.aapp.libreriaENI.model.documento.firma.FirmaENI;
+import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatos;
+import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatosEstadoElaboracion;
+import es.gob.aapp.libreriaENI.service.impl.GenerateDocumentENIImpl;
+import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoEstadoElaboracion;
 
 @Controller
 public class FileUploadController {
@@ -128,6 +143,62 @@ public class FileUploadController {
 		}
 	}
 
+	// mapeo post para subir documentos al alfresco y que impacten en archive/inside
+	// hacer uso de la libreria de los ENI
+	@PostMapping("/generateAndSubmitENI")
+	@ResponseBody
+	public ResponseEntity<String> submitEniDoc(@RequestParam("file") MultipartFile file,
+			@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass, String alfrescoFolderPath,			
+			int gustavoId, int ulisesId,
+			// params de generacion del eni
+			String MetadatoEstadoElaboracion, ArrayList<String> MetadatoOrganos, String MetadatoVersionNTI,
+			String MetadatoIdentificadorDocumento, ArrayList<FirmaENI> firmas) throws IOException, Exception{
+		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
+		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
+		ObjetoDocumentoMetadatos obMetadatos = new ObjetoDocumentoMetadatos();
+		ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
+		switch (MetadatoEstadoElaboracion) {
+			default:
+				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
+			break;
+			case "ORIGINAL":
+				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
+				break;
+			case "COPIA ELECTRONICA AUTENTICA CON CAMBIO DE FORMATO":
+				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_02);
+				break;
+			case "COPIA ELECTRONICA AUTENTICA DE DOCUMENTO PAPEL":
+				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_03);
+				break;
+			case "COPIA ELECTRONICA PARCIAL AUTENTICA":
+				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_04);
+				break;
+			case "OTROS":
+				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
+				break;
+		}
+		obMetadatos.setEstadoElaboracion(estEl);
+		//NTI v2: "http://administracionelectronica.gob.es/ENI/XSD/v2.0/documento-e"
+		obMetadatos.setVersionNTI(MetadatoVersionNTI);
+		obMetadatos.setOrgano(MetadatoOrganos);
+		eni.setFirmas(firmas);
+
+		ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
+		InputStream fileStream = file.getInputStream();
+		obDocContenido.setContenido(fileStream);
+		String extension = FilenameUtils.getExtension(file.getOriginalFilename());
+		obDocContenido.setNombreFormato(extension);
+		eni.setContenidoDocumento(obDocContenido);
+		File eniFile = gdENI.generateENIToFile(eni);
+		//TODO: Submit2Inside
+		//TODO: Generate Archive Exp
+		DiskFileItem fileItem = new DiskFileItem("file", "text/plain", false, eniFile.getName(), (int) eniFile.length(), eniFile.getParentFile());
+			//prevenimos npe
+		fileItem.getOutputStream();
+		MultipartFile multipartFile = new CommonsMultipartFile(fileItem);
+		uploadToAlfresco(clientID,clientPass,multipartFile,alfrescoFolderPath,gustavoId,ulisesId);
+		return new ResponseEntity<>(null, HttpStatus.OK);
+	}
 	@GetMapping("/getByGustavo")
 	@ResponseBody
 	public ResponseEntity<String> getByGustavoId(@RequestHeader("clientID") String clientID,
