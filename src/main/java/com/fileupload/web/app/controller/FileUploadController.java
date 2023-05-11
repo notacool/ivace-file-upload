@@ -1,12 +1,8 @@
 package com.fileupload.web.app.controller;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,32 +18,24 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
-import org.apache.commons.fileupload.disk.DiskFileItem;
-import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.commons.CommonsMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
-
-import es.gob.aapp.libreriaENI.model.documento.ObjetoDocumentoENI;
-import es.gob.aapp.libreriaENI.model.documento.contenido.ObjetoDocumentoContenido;
-import es.gob.aapp.libreriaENI.model.documento.firma.FirmaENI;
-import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatos;
-import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatosEstadoElaboracion;
-import es.gob.aapp.libreriaENI.service.impl.GenerateDocumentENIImpl;
-import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoEstadoElaboracion;
+import com.fileupload.web.app.security.JwtUtils;
+import com.fileupload.web.app.validator.RequestValidator;
 
 @Controller
 public class FileUploadController {
@@ -55,25 +43,54 @@ public class FileUploadController {
 	@Autowired
 	CredentialsRepository credRepo;
 
+	@Autowired
+	RequestValidator validator;
 	@Value("${alfresco.user}")
 	private String user;
 	@Value("${alfresco.pass}")
 	private String pass;
 	@Value("${alfresco.url}")
 	private String url;
-
-	@PostMapping("/uploadFile")
+	@Autowired
+    private JwtUtils jwtUtil;
+	@PostMapping("/uploadFile/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}")
 	@ResponseBody
-	public Boolean uploadToAlfresco(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass, @RequestParam("file") MultipartFile file, String folder,
+	public ResponseEntity<String> uploadToAlfresco(@RequestHeader("clientID") String clientID,
+			@RequestHeader("clientPass") String clientPass, @RequestParam("file") MultipartFile file,
+			@PathVariable("codArea") String codArea, @PathVariable("codAnio") String codAnio,
+			@PathVariable("codConvocatoria") String codConvocatoria,
+			@PathVariable("codExpediente") String codExpediente, @PathVariable("codProceso") String codProceso,
+			@PathVariable("codDocumentacion") String codDocumentacion,
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 			int gustavoId, int ulisesId) {
+		//validate JWT
+		
+		if(!jwtUtil.verifyToken(authorizationHeader)) {
+			System.out.println("Invalid JWT");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+		
 		try {
+			String[] metadata = new String[6];
+			metadata[0] = codArea;
+			metadata[1] = codAnio;
+			metadata[2] = codConvocatoria;
+			metadata[3] = codExpediente;
+			metadata[4] = codProceso;
+			metadata[5] = codDocumentacion;
+			String documentDestination;
+			documentDestination = "Sites/ivace/documentLibrary/"+codArea+"/"+codAnio+"/"+codConvocatoria+"/"+codExpediente+"/"+codProceso+"/"+codDocumentacion;
+
+			if(!validator.isValidRequest(metadata)) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			}
+			
+			
 			TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 			if (cred == null) {
+				System.out.println("Invalid credentials");
 				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
 			}
-			// if(gustavoId == null) gustavoId = 0;
-			// if(ulisesId == null) ulisesId = 0;
 
 			byte[] fileContent = file.getBytes();
 			Boolean fileExists = false;
@@ -96,11 +113,11 @@ public class FileUploadController {
 			// Creamos las carpetas, pueden ser una o 50
 			Folder parent = root;
 			String[] parts = null;
-			if (folder.contains("/")) {
-				parts = folder.split("/");
+			if (documentDestination.contains("/")) {
+				parts = documentDestination.split("/");
 			} else {
 				parts = new String[1];
-				parts[0] = folder;
+				parts[0] = documentDestination;
 			}
 
 			for (String folderName : parts) {
@@ -117,7 +134,7 @@ public class FileUploadController {
 			// Devolvemos false si el archivo ya existe
 			if (fileExists) {
 				System.out.println("Ya hay un archivo con ese nombre");
-				return false;
+				return ResponseEntity.badRequest().body("Ya hay un archivo con ese nombre");
 			}
 
 			// Si el archivo no existe en ese directorio lo creamos.
@@ -135,70 +152,26 @@ public class FileUploadController {
 			
 
 			System.out.println("DONE.");
-			return true;
+			return ResponseEntity.status(HttpStatus.OK).build();
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 			System.out.println(e.getStackTrace());
-			return false;
+			return ResponseEntity.badRequest().build();
 		}
 	}
 
-	// mapeo post para subir documentos al alfresco y que impacten en archive/inside
-	// hacer uso de la libreria de los ENI
-	@PostMapping("/generateAndSubmitENI")
+	@PostMapping("/login")
 	@ResponseBody
-	public ResponseEntity<String> submitEniDoc(@RequestParam("file") MultipartFile file,
-			@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass, String alfrescoFolderPath,			
-			int gustavoId, int ulisesId,
-			// params de generacion del eni
-			String MetadatoEstadoElaboracion, ArrayList<String> MetadatoOrganos, String MetadatoVersionNTI,
-			String MetadatoIdentificadorDocumento, ArrayList<FirmaENI> firmas) throws IOException, Exception{
-		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
-		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
-		ObjetoDocumentoMetadatos obMetadatos = new ObjetoDocumentoMetadatos();
-		ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
-		switch (MetadatoEstadoElaboracion) {
-			default:
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-			break;
-			case "ORIGINAL":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-				break;
-			case "COPIA ELECTRONICA AUTENTICA CON CAMBIO DE FORMATO":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_02);
-				break;
-			case "COPIA ELECTRONICA AUTENTICA DE DOCUMENTO PAPEL":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_03);
-				break;
-			case "COPIA ELECTRONICA PARCIAL AUTENTICA":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_04);
-				break;
-			case "OTROS":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
-				break;
+	public String login(@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass) {
+		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
+		if (cred == null) {
+			System.out.println("Invalid credentials");
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
+		} else {
+			return jwtUtil.generateToken(clientID);
 		}
-		obMetadatos.setEstadoElaboracion(estEl);
-		//NTI v2: "http://administracionelectronica.gob.es/ENI/XSD/v2.0/documento-e"
-		obMetadatos.setVersionNTI(MetadatoVersionNTI);
-		obMetadatos.setOrgano(MetadatoOrganos);
-		eni.setFirmas(firmas);
-
-		ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-		InputStream fileStream = file.getInputStream();
-		obDocContenido.setContenido(fileStream);
-		String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-		obDocContenido.setNombreFormato(extension);
-		eni.setContenidoDocumento(obDocContenido);
-		File eniFile = gdENI.generateENIToFile(eni);
-		//TODO: Submit2Inside
-		//TODO: Generate Archive Exp
-		DiskFileItem fileItem = new DiskFileItem("file", "text/plain", false, eniFile.getName(), (int) eniFile.length(), eniFile.getParentFile());
-			//prevenimos npe
-		fileItem.getOutputStream();
-		MultipartFile multipartFile = new CommonsMultipartFile(fileItem);
-		uploadToAlfresco(clientID,clientPass,multipartFile,alfrescoFolderPath,gustavoId,ulisesId);
-		return new ResponseEntity<>(null, HttpStatus.OK);
 	}
+	
 	@GetMapping("/getByGustavo")
 	@ResponseBody
 	public ResponseEntity<String> getByGustavoId(@RequestHeader("clientID") String clientID,
