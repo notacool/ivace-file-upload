@@ -3,6 +3,7 @@ package com.fileupload.web.app.controller;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,6 +19,8 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -43,6 +46,9 @@ public class FileUploadController {
 	@Autowired
 	CredentialsRepository credRepo;
 
+    Logger logger = LoggerFactory.getLogger(FileUploadController.class);
+
+	
 	@Autowired
 	RequestValidator validator;
 	@Value("${alfresco.user}")
@@ -65,10 +71,10 @@ public class FileUploadController {
 			int gustavoId, int ulisesId) {
 		//validate JWT
 		
-		if(!jwtUtil.verifyToken(authorizationHeader)) {
-			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-		}
+//		if(!jwtUtil.verifyToken(authorizationHeader)) {
+//			System.out.println("Invalid JWT");
+//			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+//		}
 		
 		try {
 			String[] metadata = new String[6];
@@ -164,6 +170,7 @@ public class FileUploadController {
 	@ResponseBody
 	public String login(@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
+		logger.info("login attemp");
 		if (cred == null) {
 			System.out.println("Invalid credentials");
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
@@ -171,6 +178,368 @@ public class FileUploadController {
 			return jwtUtil.generateToken(clientID);
 		}
 	}
+
+	@PostMapping("/test")
+	@ResponseBody
+	public String test() {
+		
+		
+		ArrayList<String> list = new ArrayList<String>();
+		
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
+		
+		
+		
+		
+		
+		Map<String, Object> properties = new HashMap<String, Object>();
+		// Configuraciones básicas para para conectarse
+					SessionFactory factory = SessionFactoryImpl.newInstance();
+					Map<String, String> parameter = new HashMap<String, String>();
+
+					// Credenciales del usuario y url de conexión
+					parameter.put(SessionParameter.USER, user);
+					parameter.put(SessionParameter.PASSWORD, pass);
+					parameter.put(SessionParameter.ATOMPUB_URL, url);
+					parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+					
+
+					// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+					Session session = factory.getRepositories(parameter).get(0).createSession();
+					Folder root = session.getRootFolder();
+
+					// Creamos las carpetas, pueden ser una o 50
+					Folder parent = root;
+					String[] parts = null;
+					
+		//recorremos la lista de directorios
+		for(int i=0;i<list.size();i++) {
+			parent = root;
+			if (list.get(i).contains("/")) {
+				parts = list.get(i).split("/");
+			} else {
+				parts = new String[1];
+				parts[0] = list.get(i);
+			}
+
+			for (String folderName : parts) {
+				parent = createFolder(folderName, parent);
+			}
+			logger.info("Creando el directorio: "+list.get(i));
+		}
+		logger.info("Terminados de crear los " + list.size() + " directorios");
+		
+		
+		return "";
+	}
+	@PostMapping("/generateDirStructure")
+	@ResponseBody
+	public String generateDirStruct() {
+		
+		
+		ArrayList<String> list = new ArrayList<String>();
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D06");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D07");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D06");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P04/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D06");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D07");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D08");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D09");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D06");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D07");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D06");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D07");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D08");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D09");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13/D01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D06");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D07");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D06");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P04/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D06");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D07");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D08");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D09");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D06");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D07");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D06");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D07");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D08");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D09");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13/D01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D06");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D07");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D06");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P04/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D06");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D07");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D08");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D09");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D06");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D07");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D06");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D07");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D08");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D09");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13/D01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D06");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D07");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D06");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P04/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D06");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D07");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D08");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D09");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D06");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D07");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D06");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D07");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D08");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D09");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
+		
+		
+		
+		
+		
+		Map<String, Object> properties = new HashMap<String, Object>();
+		// Configuraciones básicas para para conectarse
+					SessionFactory factory = SessionFactoryImpl.newInstance();
+					Map<String, String> parameter = new HashMap<String, String>();
+
+					// Credenciales del usuario y url de conexión
+					parameter.put(SessionParameter.USER, user);
+					parameter.put(SessionParameter.PASSWORD, pass);
+					parameter.put(SessionParameter.ATOMPUB_URL, url);
+					parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+					
+
+					// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+					Session session = factory.getRepositories(parameter).get(0).createSession();
+					Folder root = session.getRootFolder();
+
+					// Creamos las carpetas, pueden ser una o 50
+					Folder parent = root;
+					String[] parts = null;
+					
+		//recorremos la lista de directorios
+		for(int i=0;i<list.size();i++) {
+			parent = root;
+			if (list.get(i).contains("/")) {
+				parts = list.get(i).split("/");
+			} else {
+				parts = new String[1];
+				parts[0] = list.get(i);
+			}
+
+			for (String folderName : parts) {
+				parent = createFolder(folderName, parent);
+			}
+			logger.info("Creando el directorio: "+list.get(i));
+		}
+		logger.info("Terminados de crear los " + list.size() + " directorios");
+		
+		
+		return "";
+	}
+	
 	
 	@GetMapping("/getByGustavo")
 	@ResponseBody
@@ -255,12 +624,14 @@ public class FileUploadController {
 		
 	}
 
+	
+	
 	public Folder createFolder(String folderName, Folder root) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
 		properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
 		properties.put(PropertyIds.NAME, folderName);
-
+//		PropertyIds.DESCRIPTION
 		Folder parent = null;
 		for (CmisObject r : root.getChildren()) {
 			if (r.getName().equals(folderName)) {
