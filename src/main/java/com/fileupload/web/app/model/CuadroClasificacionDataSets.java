@@ -23,6 +23,7 @@ public class CuadroClasificacionDataSets {
 	LinkedHashMap<String,String> mapaDocumentacionesProcesoVerificacionfinal; //P11
 	LinkedHashMap<String,String> mapaDocumentacionesProcesoComunicacionserviciopago; //P12
 	LinkedHashMap<String,String> mapaDocumentacionesProcesoPagosubvencion; //P13
+	LinkedHashMap<String,String> mapaProcesos;
 	public CuadroClasificacionDataSets() {
 		super();
 		initMaps();
@@ -144,6 +145,29 @@ public class CuadroClasificacionDataSets {
 		mapaProcesosYDocumentaciones.put("P12",mapaDocumentacionesProcesoComunicacionserviciopago);
 		mapaProcesosYDocumentaciones.put("P13",mapaDocumentacionesProcesoPagosubvencion);
 		
+		mapaProcesos = new LinkedHashMap<>();
+		mapaProcesos.put("P01", "Solicitudes");
+		mapaProcesos.put("P02", "Pre-evaluación técnico");
+		mapaProcesos.put("P03", "Comisión evaluación IVACE");
+		mapaProcesos.put("P04", "Resolución concesión");
+		mapaProcesos.put("P05", "Comunicación concesión a beneficiario");
+		mapaProcesos.put("P06", "Anticipo o Préstamo");
+		mapaProcesos.put("P07", "Ejecución del proyecto (modificaciones)");
+		mapaProcesos.put("P08", "Justificación del proyecto");
+		mapaProcesos.put("P09", "Verificación documental");
+		mapaProcesos.put("P10", "Verificación material");
+		mapaProcesos.put("P11", "Verificación final");
+		mapaProcesos.put("P12", "Comunicación al servicio de pago");
+		mapaProcesos.put("P13", "Pago subvención");
+		
+	}
+
+	public LinkedHashMap<String, String> getMapaProcesos() {
+		return mapaProcesos;
+	}
+
+	public void setMapaProcesos(LinkedHashMap<String, String> mapaProcesos) {
+		this.mapaProcesos = mapaProcesos;
 	}
 
 	public LinkedHashMap<String, String> getMapaAreas() {

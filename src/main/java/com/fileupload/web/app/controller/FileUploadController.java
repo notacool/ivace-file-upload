@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.fileupload.web.app.model.CuadroClasificacionDataSets;
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
 import com.fileupload.web.app.security.JwtUtils;
@@ -47,7 +49,8 @@ public class FileUploadController {
 	CredentialsRepository credRepo;
 
     Logger logger = LoggerFactory.getLogger(FileUploadController.class);
-
+    @Autowired
+	CuadroClasificacionDataSets cuadroClasificacion;
 	
 	@Autowired
 	RequestValidator validator;
@@ -127,7 +130,7 @@ public class FileUploadController {
 			}
 
 			for (String folderName : parts) {
-				parent = createFolder(folderName, parent);
+				parent = createFolder(folderName, parent,"");
 			}
 
 			// Creamos el archivo si no existe
@@ -184,52 +187,52 @@ public class FileUploadController {
 	public String test() {
 		
 		
-		ArrayList<String> list = new ArrayList<String>();
-		
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
-		
-		
-		
-		
-		
-		Map<String, Object> properties = new HashMap<String, Object>();
-		// Configuraciones básicas para para conectarse
-					SessionFactory factory = SessionFactoryImpl.newInstance();
-					Map<String, String> parameter = new HashMap<String, String>();
-
-					// Credenciales del usuario y url de conexión
-					parameter.put(SessionParameter.USER, user);
-					parameter.put(SessionParameter.PASSWORD, pass);
-					parameter.put(SessionParameter.ATOMPUB_URL, url);
-					parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-					
-
-					// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
-					Session session = factory.getRepositories(parameter).get(0).createSession();
-					Folder root = session.getRootFolder();
-
-					// Creamos las carpetas, pueden ser una o 50
-					Folder parent = root;
-					String[] parts = null;
-					
-		//recorremos la lista de directorios
-		for(int i=0;i<list.size();i++) {
-			parent = root;
-			if (list.get(i).contains("/")) {
-				parts = list.get(i).split("/");
-			} else {
-				parts = new String[1];
-				parts[0] = list.get(i);
-			}
-
-			for (String folderName : parts) {
-				parent = createFolder(folderName, parent);
-			}
-			logger.info("Creando el directorio: "+list.get(i));
-		}
-		logger.info("Terminados de crear los " + list.size() + " directorios");
-		
-		
+//		ArrayList<String> list = new ArrayList<String>();
+//		
+//		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
+//		
+//		
+//		
+//		
+//		
+//		Map<String, Object> properties = new HashMap<String, Object>();
+//		// Configuraciones básicas para para conectarse
+//					SessionFactory factory = SessionFactoryImpl.newInstance();
+//					Map<String, String> parameter = new HashMap<String, String>();
+//
+//					// Credenciales del usuario y url de conexión
+//					parameter.put(SessionParameter.USER, user);
+//					parameter.put(SessionParameter.PASSWORD, pass);
+//					parameter.put(SessionParameter.ATOMPUB_URL, url);
+//					parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+//					
+//
+//					// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+//					Session session = factory.getRepositories(parameter).get(0).createSession();
+//					Folder root = session.getRootFolder();
+//
+//					// Creamos las carpetas, pueden ser una o 50
+//					Folder parent = root;
+//					String[] parts = null;
+//					
+//		//recorremos la lista de directorios
+//		for(int i=0;i<list.size();i++) {
+//			parent = root;
+//			if (list.get(i).contains("/")) {
+//				parts = list.get(i).split("/");
+//			} else {
+//				parts = new String[1];
+//				parts[0] = list.get(i);
+//			}
+//
+//			for (String folderName : parts) {
+//				parent = createFolder(folderName, parent);
+//			}
+//			logger.info("Creando el directorio: "+list.get(i));
+//		}
+//		logger.info("Terminados de crear los " + list.size() + " directorios");
+//		
+//		
 		return "";
 	}
 	@PostMapping("/generateDirStructure")
@@ -238,6 +241,23 @@ public class FileUploadController {
 		
 		
 		ArrayList<String> list = new ArrayList<String>();
+		list.add("Sites/ivace/documentLibrary/A01");
+		list.add("Sites/ivace/documentLibrary/A01/2023");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P04");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D01");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D02");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D03");
@@ -300,8 +320,27 @@ public class FileUploadController {
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D09");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D01");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D03");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13/D01");
 		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13/D02");
+		
+		list.add("Sites/ivace/documentLibrary/A02");
+		list.add("Sites/ivace/documentLibrary/A02/2023");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P04");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D01");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D02");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D03");
@@ -364,8 +403,27 @@ public class FileUploadController {
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D09");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D01");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D03");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13/D01");
 		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13/D02");
+		
+		list.add("Sites/ivace/documentLibrary/A03");
+		list.add("Sites/ivace/documentLibrary/A03/2023");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P04");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D01");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D02");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D03");
@@ -428,8 +486,27 @@ public class FileUploadController {
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D09");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D01");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D03");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13/D01");
 		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13/D02");
+		
+		list.add("Sites/ivace/documentLibrary/A04");
+		list.add("Sites/ivace/documentLibrary/A04/2023");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P04");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D01");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D02");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D03");
@@ -492,6 +569,7 @@ public class FileUploadController {
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D09");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D01");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D02");
+		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D03");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D01");
 		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
 		
@@ -530,7 +608,7 @@ public class FileUploadController {
 			}
 
 			for (String folderName : parts) {
-				parent = createFolder(folderName, parent);
+				parent = createFolder(folderName, parent,list.get(i));
 			}
 			logger.info("Creando el directorio: "+list.get(i));
 		}
@@ -626,12 +704,14 @@ public class FileUploadController {
 
 	
 	
-	public Folder createFolder(String folderName, Folder root) {
+	public Folder createFolder(String folderName, Folder root, String fullPath) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
 		properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
 		properties.put(PropertyIds.NAME, folderName);
-//		PropertyIds.DESCRIPTION
+		LinkedHashMap<String, String> mapaAsociado = null;
+		String description = null;
+
 		Folder parent = null;
 		for (CmisObject r : root.getChildren()) {
 			if (r.getName().equals(folderName)) {
@@ -640,8 +720,85 @@ public class FileUploadController {
 			}
 		}
 		// create the folder
-		if (!folderExists)
+		
+		if (!folderExists) {
+//			System.out.println("fullpath es: "+ fullPath);
+			String[] splittedPath = fullPath.split("/");
+			//Crea area
+			if(splittedPath.length == 4) {
+				logger.info("Estamos creando el Area");
+				mapaAsociado = cuadroClasificacion.getMapaAreas();
+				description = mapaAsociado.get(splittedPath[3]);
+				}
+			if(splittedPath.length == 5) {logger.info("Estamos creando el Año");}
+			if(splittedPath.length == 6) {
+				logger.info("Estamos creando la convocatoria");
+				mapaAsociado = cuadroClasificacion.getMapaConvocatorias();
+				description = mapaAsociado.get(splittedPath[5]);
+			}
+			if(splittedPath.length == 7) {
+				logger.info("Estamos creando el expediente");
+				mapaAsociado = cuadroClasificacion.getMapaExpedientes();
+				description = mapaAsociado.get(splittedPath[6]);
+				}
+			if(splittedPath.length == 8) {
+				logger.info("Estamos creando el proceso");
+				mapaAsociado = cuadroClasificacion.getMapaProcesos();
+				description = mapaAsociado.get(splittedPath[7]);
+			}
+			if(splittedPath.length == 9) {
+				logger.info("Estamos creando el documento");
+				switch(splittedPath[7]) {
+				case "P01":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P01");
+					break;
+				case "P02":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P02");
+					break;
+				case "P03":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P03");
+					break;
+				case "P04":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P04");
+					break;
+				case "P05":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P05");
+					break;
+				case "P06":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P06");
+					break;
+				case "P07":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P07");
+					break;
+				case "P08":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P08");
+					break;
+				case "P09":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P09");
+					break;
+				case "P10":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P10");
+					break;
+				case "P11":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P11");
+					break;
+				case "P12":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P12");
+					break;
+				case "P13":
+					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P13");
+					break;
+				}
+				description = mapaAsociado.get(splittedPath[8]);
+			}
+
+			
+			properties.put(PropertyIds.DESCRIPTION, description);
+
 			parent = root.createFolder(properties);
+		} else {
+//			logger.info("La carpeta " + folderName + " ya existia.");
+		}
 
 		return parent;
 	}
