@@ -23,6 +23,7 @@ public class CuadroClasificacionDataSets {
 	LinkedHashMap<String,String> mapaDocumentacionesProcesoVerificacionfinal; //P11
 	LinkedHashMap<String,String> mapaDocumentacionesProcesoComunicacionserviciopago; //P12
 	LinkedHashMap<String,String> mapaDocumentacionesProcesoPagosubvencion; //P13
+	LinkedHashMap<String,String> mapaProcesos;
 	public CuadroClasificacionDataSets() {
 		super();
 		initMaps();
@@ -74,7 +75,7 @@ public class CuadroClasificacionDataSets {
 		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario = new LinkedHashMap<>();
 		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario.put("D01", "Comunicación de concesión de la ayuda");
 		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario.put("D02", "Comunicación de denegación de la ayuda");
-		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario.put("D03", "Anexo a la resolución de concesión Documento que establece las condiciones de la ayuda anexo ");
+		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario.put("D03", "Anexo a la resolución de concesión Documento que establece las condiciones de la ayuda anexo");
 		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario.put("D04", "Notificación certificado de deducción fiscal");
 		mapaDocumentacionesProcesoComunicacionconcesionabeneficiario.put("D05", "Anexo notificación certificado de deducción fiscal");
 		mapaDocumentacionesProcesoAnticipoprestamo = new LinkedHashMap<>();
@@ -95,7 +96,7 @@ public class CuadroClasificacionDataSets {
 		mapaDocumentacionesProcesoJustificacionproyecto.put("D05", "Informe del importe máximo endosable");
 		mapaDocumentacionesProcesoJustificacionproyecto.put("D06", "Informe comprobación validez del aval");
 		mapaDocumentacionesProcesoJustificacionproyecto.put("D07", "Diligencia de formalización de avales");
-		mapaDocumentacionesProcesoJustificacionproyecto.put("D08", "Anexo de incidencias de la verificación en la notificaicón de minoración / revocación");
+		mapaDocumentacionesProcesoJustificacionproyecto.put("D08", "Anexo de incidencias de la verificación en la notificaicón de minoración revocación");
 		mapaDocumentacionesProcesoJustificacionproyecto.put("D09", "Informe de propuesta de revocación sin verificación administrativa");
 		mapaDocumentacionesProcesoVerificaciondocumental = new LinkedHashMap<>();
 		mapaDocumentacionesProcesoVerificaciondocumental.put("D01", "Documentación justificativa");
@@ -107,7 +108,7 @@ public class CuadroClasificacionDataSets {
 		mapaDocumentacionesProcesoVerificaciondocumental.put("D07", "Anexo de incidencias subsanables para el requerimiento de subsanación de la verificacion");
 		mapaDocumentacionesProcesoVerificacionmaterial = new LinkedHashMap<>();
 		mapaDocumentacionesProcesoVerificacionmaterial.put("D01", "Informe técnico de verificación sobre el terreno del expediente");
-		mapaDocumentacionesProcesoVerificacionmaterial.put("D02", "Conformidad ");
+		mapaDocumentacionesProcesoVerificacionmaterial.put("D02", "Conformidad");
 		mapaDocumentacionesProcesoVerificacionmaterial.put("D03", "Requerimiento de subsanación de la solicitud");
 		mapaDocumentacionesProcesoVerificacionmaterial.put("D04", "Notificación resolución de minoración");
 		mapaDocumentacionesProcesoVerificacionmaterial.put("D05", "Anexo de incidencias subsanables para el requerimiento de subsanación de la verificacion");
@@ -127,7 +128,7 @@ public class CuadroClasificacionDataSets {
 		mapaDocumentacionesProcesoComunicacionserviciopago.put("D03", "Propuesta de fase OK para contabilizar");
 		mapaDocumentacionesProcesoPagosubvencion = new LinkedHashMap<>();
 		mapaDocumentacionesProcesoPagosubvencion.put("D01", "Ratificación de endoso");
-		mapaDocumentacionesProcesoPagosubvencion.put("D01", "Comunicación importe de ayuda tras su verificación");
+		mapaDocumentacionesProcesoPagosubvencion.put("D02", "Comunicación importe de ayuda tras su verificación");
 		
 		mapaProcesosYDocumentaciones = new LinkedHashMap<>();
 		mapaProcesosYDocumentaciones.put("P01",mapaDocumentacionesProcesoSolicitudes);
@@ -144,6 +145,29 @@ public class CuadroClasificacionDataSets {
 		mapaProcesosYDocumentaciones.put("P12",mapaDocumentacionesProcesoComunicacionserviciopago);
 		mapaProcesosYDocumentaciones.put("P13",mapaDocumentacionesProcesoPagosubvencion);
 		
+		mapaProcesos = new LinkedHashMap<>();
+		mapaProcesos.put("P01", "Solicitudes");
+		mapaProcesos.put("P02", "Pre-evaluación técnico");
+		mapaProcesos.put("P03", "Comisión evaluación IVACE");
+		mapaProcesos.put("P04", "Resolución concesión");
+		mapaProcesos.put("P05", "Comunicación concesión a beneficiario");
+		mapaProcesos.put("P06", "Anticipo o Préstamo");
+		mapaProcesos.put("P07", "Ejecución del proyecto (modificaciones)");
+		mapaProcesos.put("P08", "Justificación del proyecto");
+		mapaProcesos.put("P09", "Verificación documental");
+		mapaProcesos.put("P10", "Verificación material");
+		mapaProcesos.put("P11", "Verificación final");
+		mapaProcesos.put("P12", "Comunicación al servicio de pago");
+		mapaProcesos.put("P13", "Pago subvención");
+		
+	}
+
+	public LinkedHashMap<String, String> getMapaProcesos() {
+		return mapaProcesos;
+	}
+
+	public void setMapaProcesos(LinkedHashMap<String, String> mapaProcesos) {
+		this.mapaProcesos = mapaProcesos;
 	}
 
 	public LinkedHashMap<String, String> getMapaAreas() {
