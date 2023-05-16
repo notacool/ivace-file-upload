@@ -69,20 +69,18 @@ public class FileUploadController {
     private JwtUtils jwtUtil;
 	@PostMapping("/uploadFile/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}")
 	@ResponseBody
-	public ResponseEntity<String> uploadToAlfresco(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass, @RequestParam("file") MultipartFile file,
+	public ResponseEntity<String> uploadToAlfresco(@RequestParam("file") MultipartFile file,
 			@PathVariable("codArea") String codArea, @PathVariable("codAnio") String codAnio,
 			@PathVariable("codConvocatoria") String codConvocatoria,
 			@PathVariable("codExpediente") String codExpediente, @PathVariable("codProceso") String codProceso,
 			@PathVariable("codDocumentacion") String codDocumentacion,
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 			int gustavoId, int ulisesId) {
-		//validate JWT
 		
-//		if(!jwtUtil.verifyToken(authorizationHeader)) {
-//			System.out.println("Invalid JWT");
-//			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-//		}
+		if (!jwtUtil.verifyToken(authorizationHeader)) {
+			System.out.println("Invalid JWT");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
 		
 		try {
 			String[] metadata = new String[6];
@@ -99,13 +97,6 @@ public class FileUploadController {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 			}
 			
-			
-			TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
-			if (cred == null) {
-				System.out.println("Invalid credentials");
-				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
-			}
-
 			byte[] fileContent = file.getBytes();
 			Boolean fileExists = false;
 
@@ -187,20 +178,14 @@ public class FileUploadController {
 		}
 	}
 
-//	@GetMapping("/tagGen")
 	public void generateFolderTag(String folderPath,String tag) {
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
-
-		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
 		parameter.put(SessionParameter.ATOMPUB_URL, url);
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-
-		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
 		Session session = factory.getRepositories(parameter).get(0).createSession();
-//		String path = "/Sites/ivace/documentLibrary/A02";
 		CmisObject cmisObject = session.getObjectByPath("/"+folderPath);
 		String nodeId = cmisObject.getId();
 		RestTemplate restTemplate = new RestTemplate();
@@ -604,13 +589,13 @@ public class FileUploadController {
 	
 	@GetMapping("/getByGustavo")
 	@ResponseBody
-	public ResponseEntity<String> getByGustavoId(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass,@RequestHeader("gustavoID") int gustavoID) {
-		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
-		if (cred == null) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
+	public ResponseEntity<String> getByGustavoId(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("gustavoID") int gustavoID) {
+		if (!jwtUtil.verifyToken(authorizationHeader)) {
+			System.out.println("Invalid JWT");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
-
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 
@@ -668,13 +653,13 @@ public class FileUploadController {
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
-	public ResponseEntity<String> getByUlisesId(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass,@RequestHeader("ulisesID") int ulisesID) {
-		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
-		if (cred == null) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
+	public ResponseEntity<String> getByUlisesId(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("ulisesID") int ulisesID) {
+		if (!jwtUtil.verifyToken(authorizationHeader)) {
+			System.out.println("Invalid JWT");
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
-
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 
