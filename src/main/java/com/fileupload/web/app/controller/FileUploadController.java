@@ -24,15 +24,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -182,58 +188,83 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/test")
+	@GetMapping("/test")
 	@ResponseBody
 	public String test() {
-		
-		
-//		ArrayList<String> list = new ArrayList<String>();
-//		
-//		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
-//		
-//		
-//		
-//		
-//		
-//		Map<String, Object> properties = new HashMap<String, Object>();
-//		// Configuraciones básicas para para conectarse
-//					SessionFactory factory = SessionFactoryImpl.newInstance();
-//					Map<String, String> parameter = new HashMap<String, String>();
-//
-//					// Credenciales del usuario y url de conexión
-//					parameter.put(SessionParameter.USER, user);
-//					parameter.put(SessionParameter.PASSWORD, pass);
-//					parameter.put(SessionParameter.ATOMPUB_URL, url);
-//					parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-//					
-//
-//					// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
-//					Session session = factory.getRepositories(parameter).get(0).createSession();
-//					Folder root = session.getRootFolder();
-//
-//					// Creamos las carpetas, pueden ser una o 50
-//					Folder parent = root;
-//					String[] parts = null;
-//					
-//		//recorremos la lista de directorios
-//		for(int i=0;i<list.size();i++) {
-//			parent = root;
-//			if (list.get(i).contains("/")) {
-//				parts = list.get(i).split("/");
-//			} else {
-//				parts = new String[1];
-//				parts[0] = list.get(i);
+		System.out.println("TESTING");
+		Map<String, Object> properties = new HashMap<String, Object>();
+		// Configuraciones básicas para para conectarse
+		SessionFactory factory = SessionFactoryImpl.newInstance();
+		Map<String, String> parameter = new HashMap<String, String>();
+
+		// Credenciales del usuario y url de conexión
+		parameter.put(SessionParameter.USER, user);
+		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+
+		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+		Session session = factory.getRepositories(parameter).get(0).createSession();
+		Folder folder = session.getRootFolder();
+
+//		logger.info(folder.getDescription());
+//		logger.info(folder.getPath());
+		String path = "/Sites/ivace/documentLibrary/A05";
+		CmisObject cmisObject = session.getObjectByPath(path);
+
+		logger.info(""+cmisObject.getBaseType());
+		logger.info(cmisObject.getDescription());
+		logger.info(cmisObject.getId());
+		String jsonTag = "areaDos";
+
+		generateFolderTag(path,jsonTag);
+//		cmisObject.set
+//		logger.info(cmisObject.getPath());
+//		for (CmisObject child : folder.getChildren()) {
+//			if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
+//				logger.info("Soy una carpeta");
+//				logger.info(child.getDescription());
+//				
+//			} else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
+//				logger.info("Soy un documento");
+//				if (child.getDescription() != null) {
+//					return child.getId();
+//				}
 //			}
-//
-//			for (String folderName : parts) {
-//				parent = createFolder(folderName, parent);
-//			}
-//			logger.info("Creando el directorio: "+list.get(i));
 //		}
-//		logger.info("Terminados de crear los " + list.size() + " directorios");
-//		
-//		
+
 		return "";
+	}
+//	@GetMapping("/tagGen")
+	public void generateFolderTag(String folderPath,String tag) {
+		SessionFactory factory = SessionFactoryImpl.newInstance();
+		Map<String, String> parameter = new HashMap<String, String>();
+
+		// Credenciales del usuario y url de conexión
+		parameter.put(SessionParameter.USER, user);
+		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+
+		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+		Session session = factory.getRepositories(parameter).get(0).createSession();
+//		String path = "/Sites/ivace/documentLibrary/A02";
+		CmisObject cmisObject = session.getObjectByPath("/"+folderPath);
+		String nodeId = cmisObject.getId();
+		RestTemplate restTemplate = new RestTemplate();
+        String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"+nodeId+"/tags";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBasicAuth(user, pass);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+		String jsonTag = "{\"tag\":\""
+				+ tag
+				+ "\"}";
+        HttpEntity<String> requestEntity = new HttpEntity<>(jsonTag, headers);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+
+
+        
+		
 	}
 	@PostMapping("/generateDirStructure")
 	@ResponseBody
@@ -703,7 +734,6 @@ public class FileUploadController {
 	}
 
 	
-	
 	public Folder createFolder(String folderName, Folder root, String fullPath) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
@@ -711,6 +741,7 @@ public class FileUploadController {
 		properties.put(PropertyIds.NAME, folderName);
 		LinkedHashMap<String, String> mapaAsociado = null;
 		String description = null;
+		String tag = "";
 
 		Folder parent = null;
 		for (CmisObject r : root.getChildren()) {
@@ -729,22 +760,26 @@ public class FileUploadController {
 				logger.info("Estamos creando el Area");
 				mapaAsociado = cuadroClasificacion.getMapaAreas();
 				description = mapaAsociado.get(splittedPath[3]);
+				tag = description;
 				}
 			if(splittedPath.length == 5) {logger.info("Estamos creando el Año");}
 			if(splittedPath.length == 6) {
 				logger.info("Estamos creando la convocatoria");
 				mapaAsociado = cuadroClasificacion.getMapaConvocatorias();
 				description = mapaAsociado.get(splittedPath[5]);
+				tag = description;
 			}
 			if(splittedPath.length == 7) {
 				logger.info("Estamos creando el expediente");
 				mapaAsociado = cuadroClasificacion.getMapaExpedientes();
 				description = mapaAsociado.get(splittedPath[6]);
+				tag = description;
 				}
 			if(splittedPath.length == 8) {
 				logger.info("Estamos creando el proceso");
 				mapaAsociado = cuadroClasificacion.getMapaProcesos();
 				description = mapaAsociado.get(splittedPath[7]);
+				tag = description;
 			}
 			if(splittedPath.length == 9) {
 				logger.info("Estamos creando el documento");
@@ -790,12 +825,19 @@ public class FileUploadController {
 					break;
 				}
 				description = mapaAsociado.get(splittedPath[8]);
+				tag = description;
 			}
 
 			
 			properties.put(PropertyIds.DESCRIPTION, description);
 
 			parent = root.createFolder(properties);
+//			if(tag.length() > 20) {
+//				tag = "";
+//			}
+			if (tag.length() != 0) {
+				generateFolderTag(fullPath, tag);
+			}
 		} else {
 //			logger.info("La carpeta " + folderName + " ya existia.");
 		}
