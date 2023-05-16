@@ -34,7 +34,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -188,53 +187,6 @@ public class FileUploadController {
 		}
 	}
 
-	@GetMapping("/test")
-	@ResponseBody
-	public String test() {
-		System.out.println("TESTING");
-		Map<String, Object> properties = new HashMap<String, Object>();
-		// Configuraciones básicas para para conectarse
-		SessionFactory factory = SessionFactoryImpl.newInstance();
-		Map<String, String> parameter = new HashMap<String, String>();
-
-		// Credenciales del usuario y url de conexión
-		parameter.put(SessionParameter.USER, user);
-		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
-		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-
-		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
-		Session session = factory.getRepositories(parameter).get(0).createSession();
-		Folder folder = session.getRootFolder();
-
-//		logger.info(folder.getDescription());
-//		logger.info(folder.getPath());
-		String path = "/Sites/ivace/documentLibrary/A05";
-		CmisObject cmisObject = session.getObjectByPath(path);
-
-		logger.info(""+cmisObject.getBaseType());
-		logger.info(cmisObject.getDescription());
-		logger.info(cmisObject.getId());
-		String jsonTag = "areaDos";
-
-		generateFolderTag(path,jsonTag);
-//		cmisObject.set
-//		logger.info(cmisObject.getPath());
-//		for (CmisObject child : folder.getChildren()) {
-//			if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-//				logger.info("Soy una carpeta");
-//				logger.info(child.getDescription());
-//				
-//			} else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
-//				logger.info("Soy un documento");
-//				if (child.getDescription() != null) {
-//					return child.getId();
-//				}
-//			}
-//		}
-
-		return "";
-	}
 //	@GetMapping("/tagGen")
 	public void generateFolderTag(String folderPath,String tag) {
 		SessionFactory factory = SessionFactoryImpl.newInstance();
@@ -653,7 +605,7 @@ public class FileUploadController {
 	@GetMapping("/getByGustavo")
 	@ResponseBody
 	public ResponseEntity<String> getByGustavoId(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass, int gustavoId) {
+			@RequestHeader("clientPass") String clientPass,@RequestHeader("gustavoID") int gustavoID) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		if (cred == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
@@ -674,7 +626,7 @@ public class FileUploadController {
 		String fileId = "";
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-				fileId = find((Folder) r, gustavoId, 0);
+				fileId = find((Folder) r, gustavoID, 0);
 				if(!fileId.equals("")) return new ResponseEntity<>(fileId, HttpStatus.OK);
 			}
 		}
@@ -682,27 +634,42 @@ public class FileUploadController {
 		else return new ResponseEntity<>(fileId, HttpStatus.OK);
 	}
 
-	public String find(Folder r, int gustavoId, int type) {
+	public String find(Folder r, int externalId, int type) {
 		Folder folder = (Folder) r;
+		String fileId = "";
+		String out= "";
 		for (CmisObject child : folder.getChildren()) {
 			if (child.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
-				find((Folder) child, gustavoId, type);
+				out = find((Folder) child, externalId, type);
+				if (out != "") {
+					return out;
+				}
 			} else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
-				// SEPARAMOS LA DESCRIPCION COGIENDO LA PRIMERA PARTE
-				if (child.getDescription() != null) {
-					if (child.getDescription().split("&&&")[type].equals(gustavoId + "")) {
-						return child.getId();
+				//externalId -> gustavo:0 ulises:1
+				if(type == 0) {
+					if (child.getDescription() != null) {
+						if(child.getProperty("ids:gustavoID").getFirstValue().equals(""+externalId)) {
+							fileId = child.getId();
+							return fileId;
+						}
+					}
+				} else {
+					if (child.getDescription() != null) {
+						if(child.getProperty("ids:ulisesID").getFirstValue().equals(""+externalId)) {
+							fileId = child.getId();
+							return fileId;
+						}
 					}
 				}
 			}
 		}
-		return "";
+		return fileId;
 	}
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
 	public ResponseEntity<String> getByUlisesId(@RequestHeader("clientID") String clientID,
-			@RequestHeader("clientPass") String clientPass, int ulisesID) {
+			@RequestHeader("clientPass") String clientPass,@RequestHeader("ulisesID") int ulisesID) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		if (cred == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid credentials.");
@@ -753,9 +720,7 @@ public class FileUploadController {
 		// create the folder
 		
 		if (!folderExists) {
-//			System.out.println("fullpath es: "+ fullPath);
 			String[] splittedPath = fullPath.split("/");
-			//Crea area
 			if(splittedPath.length == 4) {
 				logger.info("Estamos creando el Area");
 				mapaAsociado = cuadroClasificacion.getMapaAreas();
@@ -832,9 +797,6 @@ public class FileUploadController {
 			properties.put(PropertyIds.DESCRIPTION, description);
 
 			parent = root.createFolder(properties);
-//			if(tag.length() > 20) {
-//				tag = "";
-//			}
 			if (tag.length() != 0) {
 				generateFolderTag(fullPath, tag);
 			}
