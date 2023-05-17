@@ -10,7 +10,8 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 @Component
 public class JwtUtils {
-    private static final String SECRET = "your-secret-key";
+	
+    private static final String SECRET = "N0t4C00l.2023.";
     private static final int EXPIRATION_TIME = 3600000; // seconds in ms - 1Hour
 
     public static String generateToken(String subject) {

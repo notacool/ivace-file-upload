@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -65,6 +66,8 @@ public class FileUploadController {
 	private String pass;
 	@Value("${alfresco.url}")
 	private String url;
+	@Value("${alfresco.documentLibrary}")
+	private String documentLibrary;
 	@Autowired
     private JwtUtils jwtUtil;
 	@PostMapping("/uploadFile/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}")
@@ -75,7 +78,8 @@ public class FileUploadController {
 			@PathVariable("codExpediente") String codExpediente, @PathVariable("codProceso") String codProceso,
 			@PathVariable("codDocumentacion") String codDocumentacion,
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			int gustavoId, int ulisesId) {
+			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
+			@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
 		
 		if (!jwtUtil.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -147,16 +151,24 @@ public class FileUploadController {
 			properties2.put(PropertyIds.OBJECT_TYPE_ID, "cmis:document");
 			properties2.put(PropertyIds.NAME, file.getOriginalFilename());
 			
-
 			InputStream stream = new ByteArrayInputStream(fileContent);
 			ContentStream contentStream = new ContentStreamImpl(file.getOriginalFilename(),
 					BigInteger.valueOf(fileContent.length), "text/plain", stream);
 
 			// Creamos el documento en el Alfresco
-			parent.createDocument(properties2, contentStream, VersioningState.MAJOR);		
-			
+			CmisObject o = parent.createDocument(properties2, contentStream, VersioningState.MAJOR);
+			try {
+				if (gustavoId != "") {
+					properties2.put("ids:gustavoID", gustavoId);
+				} else if (ulisesId != "") {
+					properties2.put("ids:ulisesID", ulisesId);
+				}
+			} catch (Exception e) {
+				logger.info("Gustavo/Ulises ID not present.");
+			}
+			o.updateProperties(properties2, true);
 
-			System.out.println("DONE.");
+			logger.info("Document uploaded successfully");
 			return ResponseEntity.status(HttpStatus.OK).build();
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -199,347 +211,84 @@ public class FileUploadController {
         HttpEntity<String> requestEntity = new HttpEntity<>(jsonTag, headers);
         ResponseEntity<String> responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
-
-        
-		
 	}
 	@PostMapping("/generateDirStructure")
 	@ResponseBody
-	public String generateDirStruct() {
-		
+	public String generateDirStruct(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+		//Only allowed for the JWT associated with the NOTACOOLADMIN user
+		if (!jwtUtil.verifyToken(authorizationHeader) || jwtUtil.extractSubject(authorizationHeader) != "NOTACOOLADMIN") {
+			System.out.println("Invalid JWT");
+			return "";
+		}
 		
 		ArrayList<String> list = new ArrayList<String>();
-		list.add("Sites/ivace/documentLibrary/A01");
-		list.add("Sites/ivace/documentLibrary/A01/2023");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D06");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P01/D07");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P02/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P03/D06");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P04/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P05/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P06/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P07/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D06");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D07");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D08");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P08/D09");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D06");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P09/D07");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P10/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D04");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D05");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D06");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D07");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D08");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P11/D09");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D02");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P12/D03");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13/D01");
-		list.add("Sites/ivace/documentLibrary/A01/2023/0001.23/999/P13/D02");
-		
-		list.add("Sites/ivace/documentLibrary/A02");
-		list.add("Sites/ivace/documentLibrary/A02/2023");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D06");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P01/D07");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P02/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P03/D06");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P04/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P05/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P06/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P07/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D06");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D07");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D08");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P08/D09");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D06");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P09/D07");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P10/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D04");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D05");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D06");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D07");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D08");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P11/D09");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D02");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P12/D03");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13/D01");
-		list.add("Sites/ivace/documentLibrary/A02/2023/0001.23/999/P13/D02");
-		
-		list.add("Sites/ivace/documentLibrary/A03");
-		list.add("Sites/ivace/documentLibrary/A03/2023");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D06");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P01/D07");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P02/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P03/D06");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P04/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P05/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P06/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P07/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D06");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D07");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D08");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P08/D09");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D06");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P09/D07");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P10/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D04");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D05");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D06");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D07");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D08");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P11/D09");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D02");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P12/D03");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13/D01");
-		list.add("Sites/ivace/documentLibrary/A03/2023/0001.23/999/P13/D02");
-		
-		list.add("Sites/ivace/documentLibrary/A04");
-		list.add("Sites/ivace/documentLibrary/A04/2023");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D06");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P01/D07");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P02/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P03/D06");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P04/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P05/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P06/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P07/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D06");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D07");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D08");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P08/D09");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D06");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P09/D07");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P10/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D04");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D05");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D06");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D07");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D08");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P11/D09");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D02");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P12/D03");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D01");
-		list.add("Sites/ivace/documentLibrary/A04/2023/0001.23/999/P13/D02");
+		String[] literals = new String[5];
+		cuadroClasificacion.getMapaAreas().forEach((k, v) -> {
+			logger.info(k + " " + v);
+			literals[0] = documentLibrary + k;
+			list.add(documentLibrary + k);
+			cuadroClasificacion.getMapaAnios().forEach((i, b) -> {
+				list.add(literals[0] + "/" + i);
+				literals[1] = literals[0] + "/" + i;
+				cuadroClasificacion.getMapaConvocatorias().forEach((c, r) -> {
+					list.add(literals[1] + "/" + c);
+					literals[2] = literals[1] + "/" + c;
+					cuadroClasificacion.getMapaExpedientes().forEach((l, m) -> {
+						list.add(literals[2] + "/" + l);
+						literals[3] = literals[2] + "/" + l;
+						cuadroClasificacion.getMapaProcesos().forEach((q, w) -> {
+							list.add(literals[3] + "/" + q);
+							literals[4] = literals[3] + "/" + q;
+							LinkedHashMap<String, String> mapaActual = new LinkedHashMap<>();
+							switch (q) {
+							case "P01":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoSolicitudes();
+								break;
+							case "P02":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoPreevaluaciontecnico();
+								break;
+							case "P03":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoComisionEvaluacionivace();
+								break;
+							case "P04":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoResolucionconcesion();
+								break;
+							case "P05":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoComunicacionconcesionabeneficiario();
+								break;
+							case "P06":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoAnticipoprestamo();
+								break;
+							case "P07":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoEjecuciondeproyecto();
+								break;
+							case "P08":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoJustificacionproyecto();
+								break;
+							case "P09":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificaciondocumental();
+								break;
+							case "P10":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificacionmaterial();
+								break;
+							case "P11":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificacionfinal();
+								break;
+							case "P12":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoComunicacionserviciopago();
+								break;
+							case "P13":
+								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoPagosubvencion();
+								break;
+							}
+							mapaActual.forEach((d, s) -> {
+								list.add(literals[4] + "/" + d);
+							});
+						});
+					});
+				});
+			});
+		});
 		
 		
 		
@@ -612,7 +361,9 @@ public class FileUploadController {
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
 				fileId = find((Folder) r, gustavoID, 0);
-				if(!fileId.equals("")) return new ResponseEntity<>(fileId, HttpStatus.OK);
+				if (!fileId.equals("")) {
+					return new ResponseEntity<>("Alfresco NodeId: " + fileId, HttpStatus.OK);
+				}
 			}
 		}
 		if(fileId.equals(""))  return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -676,7 +427,9 @@ public class FileUploadController {
 		for (CmisObject r : root.getChildren()) {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
 				fileId = find((Folder) r, ulisesID, 1);
-				if(!fileId.equals("")) return new ResponseEntity<>(fileId, HttpStatus.OK);
+				if (!fileId.equals("")) {
+					return new ResponseEntity<>("Alfresco NodeId: "+fileId, HttpStatus.OK);
+				}
 			}
 		}
 		
@@ -786,9 +539,7 @@ public class FileUploadController {
 				generateFolderTag(fullPath, tag);
 			}
 		} else {
-//			logger.info("La carpeta " + folderName + " ya existia.");
 		}
-
 		return parent;
 	}
 
