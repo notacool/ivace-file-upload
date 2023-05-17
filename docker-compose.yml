@@ -24,7 +24,9 @@ services:
     ports:
       - "${FILEUPLOAD_PORT}:8080"
     volumes:
-      - ./conf/backend/application.properties:/src/main/resources/application.properties
+    - type: bind
+      source: ./src/main/resources/application.properties
+      target: /conf/backend/application.properties
     depends_on:
       - mysql
     networks:
