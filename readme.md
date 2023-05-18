@@ -52,7 +52,9 @@ GET:/getByUlises
 
 * Ejemplo de llamada: http://localhost:8080/getByUlises
 
-POST:/generateDirStructure
+# Inicializacion de los directorios del cuadro de clasificacion.
+
+* POST:/generateDirStructure
 
 * Función de inicialización encargada de generar toda la estructura de directorios especificada por el cuadro de clasificación elaborado previamente.
 * La autenticación se realiza adjuntando a la cabecera Authorization el token obtenido en /login.
