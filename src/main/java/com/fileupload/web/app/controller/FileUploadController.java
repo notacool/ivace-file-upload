@@ -4,9 +4,9 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -157,10 +157,31 @@ public class FileUploadController {
 
 			// Creamos el documento en el Alfresco
 			CmisObject o = parent.createDocument(properties2, contentStream, VersioningState.MAJOR);
+			//Check gustavo/ulises UniqueConstraint
+			String constraintViolationFound = "";
 			try {
-				if (gustavoId != "") {
+				if (gustavoId != "" && gustavoId != null) {
+					constraintViolationFound = find((Folder) root, Integer.parseInt(gustavoId), 0);
+					if (constraintViolationFound != "") {
+						logger.info("Could not set GustavoID - Constraint violation found.");
+						return ResponseEntity.status(HttpStatus.OK).build();
+					}
+				}
+				if (ulisesId != "" && ulisesId != null) {
+					constraintViolationFound = find((Folder) root, Integer.parseInt(ulisesId), 0);
+					if (constraintViolationFound != "") {
+						logger.info("Could not set UlisesID - Constraint violation found.");
+						return ResponseEntity.status(HttpStatus.OK).build();
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			try {
+				if (gustavoId != null) {
 					properties2.put("ids:gustavoID", gustavoId);
-				} else if (ulisesId != "") {
+				}
+				if (ulisesId != null) {
 					properties2.put("ids:ulisesID", ulisesId);
 				}
 			} catch (Exception e) {
@@ -338,7 +359,7 @@ public class FileUploadController {
 	
 	@GetMapping("/getByGustavo")
 	@ResponseBody
-	public ResponseEntity<String> getByGustavoId(
+	public ResponseEntity<byte[]> getByGustavoId(
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 			@RequestHeader("gustavoID") int gustavoID) {
 		if (!jwtUtil.verifyToken(authorizationHeader)) {
@@ -362,12 +383,19 @@ public class FileUploadController {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
 				fileId = find((Folder) r, gustavoID, 0);
 				if (!fileId.equals("")) {
-					return new ResponseEntity<>("Alfresco NodeId: " + fileId, HttpStatus.OK);
+					String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"+fileId+"/content?attachment=true";
+					RestTemplate restTemplate = new RestTemplate();
+					HttpHeaders headers = new HttpHeaders();
+					headers.setBasicAuth(user, pass);
+				    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
+				    HttpEntity<String> entity = new HttpEntity<>(headers);
+				    ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
+			        return response;
 				}
 			}
 		}
 		if(fileId.equals(""))  return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		else return new ResponseEntity<>(fileId, HttpStatus.OK);
+		else return new ResponseEntity<>(HttpStatus.OK);
 	}
 
 	public String find(Folder r, int externalId, int type) {
@@ -383,19 +411,22 @@ public class FileUploadController {
 			} else if (child.getBaseTypeId() == BaseTypeId.CMIS_DOCUMENT) {
 				//externalId -> gustavo:0 ulises:1
 				if(type == 0) {
-					if (child.getDescription() != null) {
-						if(child.getProperty("ids:gustavoID").getFirstValue().equals(""+externalId)) {
-							fileId = child.getId();
-							return fileId;
-						}
+					try {
+							if(child.getProperty("ids:gustavoID").getFirstValue().equals(""+externalId)) {
+								fileId = child.getId();
+								return fileId;
+							}
+					}catch(Exception e) {
+						
 					}
 				} else {
-					if (child.getDescription() != null) {
-						if(child.getProperty("ids:ulisesID").getFirstValue().equals(""+externalId)) {
-							fileId = child.getId();
-							return fileId;
-						}
-					}
+					try {
+							if(child.getProperty("ids:ulisesID").getFirstValue().equals(""+externalId)) {
+								fileId = child.getId();
+								return fileId;
+							}
+					}catch(Exception e) {}
+					
 				}
 			}
 		}
@@ -404,7 +435,7 @@ public class FileUploadController {
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
-	public ResponseEntity<String> getByUlisesId(
+	public ResponseEntity<byte[]> getByUlisesId(
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 			@RequestHeader("ulisesID") int ulisesID) {
 		if (!jwtUtil.verifyToken(authorizationHeader)) {
@@ -428,13 +459,21 @@ public class FileUploadController {
 			if (r.getBaseTypeId() == BaseTypeId.CMIS_FOLDER) {
 				fileId = find((Folder) r, ulisesID, 1);
 				if (!fileId.equals("")) {
-					return new ResponseEntity<>("Alfresco NodeId: "+fileId, HttpStatus.OK);
+					String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"+fileId+"/content?attachment=true";
+					RestTemplate restTemplate = new RestTemplate();
+					HttpHeaders headers = new HttpHeaders();
+					headers.setBasicAuth(user, pass);
+				    headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
+				    HttpEntity<String> entity = new HttpEntity<>(headers);
+				    ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
+			        return response;
 				}
 			}
 		}
 		
+        
 		if(fileId.equals(""))  return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-		else return new ResponseEntity<>(fileId, HttpStatus.OK);
+		else return new ResponseEntity<>(HttpStatus.OK);
 		
 	}
 
