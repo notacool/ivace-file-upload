@@ -48,6 +48,9 @@ import com.fileupload.web.app.repository.CredentialsRepository;
 import com.fileupload.web.app.security.JwtUtils;
 import com.fileupload.web.app.validator.RequestValidator;
 
+import io.swagger.annotations.Api;
+
+@Api(description="Servicio para comunicar aplicaciones externas con el Gestor Documental del IVACE.", tags = "API de comunicacion con Alfresco")
 @Controller
 public class FileUploadController {
 
