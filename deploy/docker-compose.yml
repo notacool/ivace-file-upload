@@ -16,17 +16,15 @@ services:
   
   file-upload:
     restart: always
-    build: 
-      context: .
-      dockerfile: Dockerfile
+    image: file-upload:latest
     environment:
       - MYSQL_HOST=mysql
     ports:
       - "${FILEUPLOAD_PORT}:8080"
     volumes:
     - type: bind
-      source: ./src/main/resources/application.properties
-      target: /conf/backend/application.properties
+      target: /app/src/main/resources/application.properties
+      source: ./conf/backend/application.properties
     depends_on:
       - mysql
     networks:
