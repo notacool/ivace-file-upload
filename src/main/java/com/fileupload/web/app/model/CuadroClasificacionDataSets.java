@@ -35,32 +35,32 @@ public class CuadroClasificacionDataSets {
 
 		//AREAS
 		mapaAreas = new LinkedHashMap<>();
-		// mapaAreas.put("AA01", "Energía");
+		mapaAreas.put("AA01", "Energía");
 		// mapaAreas.put("AA02", "Innovación");
 		// mapaAreas.put("AA03", "Internacional");
-		mapaAreas.put("AA04", "Parques Empresariales");
+		// mapaAreas.put("AA04", "Parques Empresariales");
 
 		//Anios
 		mapaAnios = new LinkedHashMap<>();
-		// mapaAnios.put("2019", "2019");
+		mapaAnios.put("2019", "2019");
 		// mapaAnios.put("2020", "2020");
 		// mapaAnios.put("2021", "2021");
-		mapaAnios.put("2023", "2023");
+		// mapaAnios.put("2023", "2023");
 
 		//Convocatorias
 		mapaConvocatorias = new LinkedHashMap<>();
-		// mapaConvocatorias.put("IMEREA", "IMEREA");
+		mapaConvocatorias.put("IMEREA", "IMEREA");
 		// mapaConvocatorias.put("IMDIGA", "IMDIGA");
 		// mapaConvocatorias.put("ITATUT", "ITATUT");
-		mapaConvocatorias.put("AAAAAA", "AAAAAA");
+		// mapaConvocatorias.put("AAAAAA", "AAAAAA");
 
 		//Expedientes
 		mapaExpedientes = new LinkedHashMap<>();
-		// mapaExpedientes.put("002", "002");
+		mapaExpedientes.put("002", "002");
 		// mapaExpedientes.put("018", "018");
 		// mapaExpedientes.put("381", "381");
 		// mapaExpedientes.put("017", "017");
-		mapaExpedientes.put("999", "999");
+		// mapaExpedientes.put("999", "999");
 
 		//Procesos + Documentaciones
 		mapaDocumentacionesProcesoSolicitudes = new LinkedHashMap<>();
