@@ -103,10 +103,10 @@ public class FileUploadController {
 	@Autowired
 	RequestValidator validator;
 
-	@Value("${alfresco.user}")
-	private String user;
-	@Value("${alfresco.pass}")
-	private String pass;
+	// @Value("${alfresco.user}")
+	// private String user;
+	// @Value("${alfresco.pass}")
+	// private String pass;
 	@Value("${alfresco.url}")
 	private String url;
 	@Value("${alfresco.documentLibrary}")
@@ -114,14 +114,19 @@ public class FileUploadController {
 
 	@PostMapping("/uploadFile/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}")
 	@ResponseBody
-	public ResponseEntity<String> uploadToAlfresco(@RequestPart("file") MultipartFile file,
-			@PathVariable("codArea") String codArea, @PathVariable("codAnio") String codAnio,
-			@PathVariable("codConvocatoria") String codConvocatoria,
-			@PathVariable("codExpediente") String codExpediente, @PathVariable("codProceso") String codProceso,
-			@PathVariable("codDocumentacion") String codDocumentacion,
-			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
-			@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
+	public ResponseEntity<String> uploadToAlfresco(
+		@RequestPart("file") MultipartFile file,
+		@PathVariable("codArea") String codArea, 
+		@PathVariable("codAnio") String codAnio,
+		@PathVariable("codConvocatoria") String codConvocatoria,
+		@PathVariable("codExpediente") String codExpediente, 
+		@PathVariable("codProceso") String codProceso,
+		@PathVariable("codDocumentacion") String codDocumentacion, 
+		@RequestHeader(value = "user") String user,
+		@RequestHeader(value = "password") String password, 
+		@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+		@RequestHeader(value = "gustavoId", required = false) String gustavoId,
+		@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -153,7 +158,7 @@ public class FileUploadController {
 
 			// Credenciales del usuario y url de conexión
 			parameter.put(SessionParameter.USER, user);
-			parameter.put(SessionParameter.PASSWORD, pass);
+			parameter.put(SessionParameter.PASSWORD, password);
 			parameter.put(SessionParameter.ATOMPUB_URL, url);
 			parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
@@ -172,7 +177,7 @@ public class FileUploadController {
 			}
 
 			for (String folderName : parts) {
-				parent = createFolder(folderName, parent, "", "");
+				parent = createFolder(folderName, parent, "", "", user, password);
 			}
 
 			// Creamos el archivo si no existe
@@ -255,7 +260,7 @@ public class FileUploadController {
 
 	@PostMapping("/delete-tags")
 	@ResponseBody
-	public void deleteAllTags() throws JsonMappingException, JsonProcessingException {
+	public void deleteAllTags(String user, String pass) throws JsonMappingException, JsonProcessingException {
 
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
@@ -384,7 +389,7 @@ public class FileUploadController {
 		}
 	}
 
-	public void generateFolderTag(String folderPath, String tag) {
+	public void generateFolderTag(String folderPath, String tag, String user, String pass) {
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 		parameter.put(SessionParameter.USER, user);
@@ -409,9 +414,8 @@ public class FileUploadController {
 
 	@PostMapping("/generateDirStructure")
 	@ResponseBody
-	public String generateDirStruct(
-			@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-		// Only allowed for the JWT associated with the NOTACOOLADMIN user
+	public String generateDirStruct(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+		@PathVariable("user") String user, @PathVariable("pass") String pass) {
 		if (!JwtUtils.verifyToken(authorizationHeader)
 				|| !JwtUtils.extractSubject(authorizationHeader).equals("NOTACOOLADMIN")) {
 			System.out.println("Invalid JWT");
@@ -537,7 +541,7 @@ public class FileUploadController {
 			}
 
 			for (String folderName : parts) {
-				parent = createFolder(folderName, parent, listCod.get(i), listNom.get(i));
+				parent = createFolder(folderName, parent, listCod.get(i), listNom.get(i), user, pass);
 			}
 			logger.info("Creando el directorio: " + listNom.get(i));
 		}
@@ -548,9 +552,8 @@ public class FileUploadController {
 
 	@GetMapping("/getByGustavo")
 	@ResponseBody
-	public ResponseEntity<byte[]> getByGustavoId(
-			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader("gustavoID") int gustavoID) {
+	public ResponseEntity<byte[]> getByGustavoId(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("gustavoID") int gustavoID, @PathVariable("user") String user, @PathVariable("pass") String pass) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -629,9 +632,8 @@ public class FileUploadController {
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
-	public ResponseEntity<byte[]> getByUlisesId(
-			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader("ulisesID") int ulisesID) {
+	public ResponseEntity<byte[]> getByUlisesId(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("ulisesID") int ulisesID, @PathVariable("user") String user, @PathVariable("pass") String pass) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -674,7 +676,7 @@ public class FileUploadController {
 
 	}
 
-	public Folder createFolder(String folderName, Folder root, String fullPathCod, String fullPathNom) {
+	public Folder createFolder(String folderName, Folder root, String fullPathCod, String fullPathNom, String user, String pass) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
 		properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
@@ -800,7 +802,7 @@ public class FileUploadController {
 			parent = root.createFolder(properties);
 
 			if (tag.length() != 0) {
-				generateFolderTag(fullPathNom, tag);
+				generateFolderTag(fullPathNom, tag, user, pass);
 			}
 
 		}
@@ -880,10 +882,9 @@ public class FileUploadController {
 	public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(@RequestPart("file") MultipartFile file,
 		@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass, String MetadatoEstadoElaboracion,
 		String MetadatoOrganos, String MetadatoIdDocumento, String MetadatoVersionNTI, String pathDestino, 
-		String codArea, String codAnio, String codConvocatoria, String codExpediente, String codProceso, String codDocumentacion, 
-		@RequestHeader(value = "Authorization", required = false) String authorizationHeader, 
-		@RequestHeader(value = "gustavoId", required = false) String gustavoId, 
-		@RequestHeader(value = "ulisesId", required = false) String ulisesId) 
+		String codArea, String codAnio, String codConvocatoria, String codExpediente, String codProceso, String codDocumentacion,
+		String user, String pass, @RequestHeader(value = "Authorization", required = false) String authorizationHeader, 
+		@RequestHeader(value = "gustavoId", required = false) String gustavoId, @RequestHeader(value = "ulisesId", required = false) String ulisesId) 
 		throws IOException, Exception {
 
 		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
@@ -941,7 +942,8 @@ public class FileUploadController {
 
 		if (ValidateENI(eni)) {
 			fileStream = gdENI.generateENI(eni);
-			uploadToAlfresco(file, codArea, codAnio, codConvocatoria, codExpediente, codProceso, codDocumentacion, authorizationHeader, gustavoId, ulisesId);
+			uploadToAlfresco(file, codArea, codAnio, codConvocatoria, codExpediente, codProceso, codDocumentacion, 
+				user, pass, authorizationHeader, gustavoId, ulisesId);
 
 			return new ResponseEntity<>(null, HttpStatus.OK);
 		} else {
