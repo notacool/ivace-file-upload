@@ -1,6 +1,8 @@
 package com.fileupload.web.app.controller;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -30,6 +32,7 @@ import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +43,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -122,8 +126,8 @@ public class FileUploadController {
 		@PathVariable("codExpediente") String codExpediente, 
 		@PathVariable("codProceso") String codProceso,
 		@PathVariable("codDocumentacion") String codDocumentacion, 
-		@RequestHeader(value = "user") String user,
-		@RequestHeader(value = "password") String password, 
+		@RequestHeader(value = "user", required = true) String user,
+		@RequestHeader(value = "password", required = true) String password, 
 		@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 		@RequestHeader(value = "gustavoId", required = false) String gustavoId,
 		@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
@@ -811,9 +815,12 @@ public class FileUploadController {
 
 	@PostMapping("/generate-eni")
 	@ResponseBody
-	public ResponseEntity<String> GenerateDocumentENI(@RequestPart("file") MultipartFile file, String MetadatoEstadoElaboracion,
-		String MetadatoOrganos, String MetadatoIdDocumento, String MetadatoVersionNTI, String codArea, String codAnio, 
-		String codConvocatoria, String codExpediente, String codProceso, String codDocumentacion) throws IOException, Exception {
+	public ResponseEntity<String> GenerateDocumentENI(
+		@RequestPart("file") MultipartFile file, 
+		String MetadatoEstadoElaboracion,
+		String MetadatoOrganos, 
+		String MetadatoIdDocumento, 
+		String MetadatoVersionNTI) throws IOException, Exception {
 
 		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
 		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
@@ -821,6 +828,12 @@ public class FileUploadController {
 		ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
 		GregorianCalendar gCalendar = new GregorianCalendar();
 		ArrayList<String> organos = new ArrayList<String>();
+
+		if(!validator.isValidDocumentId(MetadatoIdDocumento)){
+			return new ResponseEntity<>
+				("Identificador introducido no válido. Debe ser de la forma ES_LLNNNNNNN_NNNN_XXXXXXX con un máximo de 52 caracteres (L = Letra, N = Numeros).", 
+				HttpStatus.BAD_REQUEST);
+		}
 
 		organos.add(MetadatoOrganos);
 
@@ -870,7 +883,7 @@ public class FileUploadController {
 		eni.setContenidoDocumento(obDocContenido);
 
 		if (ValidateENI(eni)) {
-			fileStream = gdENI.generateENI(eni);
+			gdENI.generateENIToFile(eni);
 			return new ResponseEntity<>(null, HttpStatus.OK);
 		} else {
 			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
@@ -879,13 +892,24 @@ public class FileUploadController {
 
 	@PostMapping("/generate-eni-and-upload-to-alfresco")
 	@ResponseBody
-	public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(@RequestPart("file") MultipartFile file,
-		@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass, String MetadatoEstadoElaboracion,
-		String MetadatoOrganos, String MetadatoIdDocumento, String MetadatoVersionNTI, String pathDestino, 
-		String codArea, String codAnio, String codConvocatoria, String codExpediente, String codProceso, String codDocumentacion,
-		String user, String pass, @RequestHeader(value = "Authorization", required = false) String authorizationHeader, 
-		@RequestHeader(value = "gustavoId", required = false) String gustavoId, @RequestHeader(value = "ulisesId", required = false) String ulisesId) 
-		throws IOException, Exception {
+	public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(
+		@RequestPart("file") MultipartFile file,
+		@RequestHeader("user") String user, 
+		@RequestHeader("password") String password, 
+		@RequestHeader(value = "Authorization", required = false) String authorizationHeader, 
+		@RequestHeader(value = "gustavoId", required = false) String gustavoId, 
+		@RequestHeader(value = "ulisesId", required = false) String ulisesId, 
+		String MetadatoEstadoElaboracion,
+		String MetadatoOrganos, 
+		String MetadatoIdDocumento, 
+		String MetadatoVersionNTI, 
+		String pathDestino, 
+		String codArea, 
+		String codAnio, 
+		String codConvocatoria, 
+		String codExpediente, 
+		String codProceso, 
+		String codDocumentacion) throws IOException, Exception {
 
 		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
 		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
@@ -941,9 +965,11 @@ public class FileUploadController {
 		eni.setContenidoDocumento(obDocContenido);
 
 		if (ValidateENI(eni)) {
-			fileStream = gdENI.generateENI(eni);
-			uploadToAlfresco(file, codArea, codAnio, codConvocatoria, codExpediente, codProceso, codDocumentacion, 
-				user, pass, authorizationHeader, gustavoId, ulisesId);
+			File f = gdENI.generateENIToFile(eni);
+			FileInputStream input = new FileInputStream(f);
+			MultipartFile multipartFile = new MockMultipartFile(f.getName(), IOUtils.toByteArray(input));	
+			uploadToAlfresco(multipartFile, codArea, codAnio, codConvocatoria, codExpediente, codProceso, codDocumentacion, 
+				user, password, authorizationHeader, gustavoId, ulisesId);
 
 			return new ResponseEntity<>(null, HttpStatus.OK);
 		} else {
@@ -964,10 +990,16 @@ public class FileUploadController {
 		path = "/generate-expediente", 
 		method = RequestMethod.POST, 
 		consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<String> GenerateExpedienteENI(@RequestPart("file") MultipartFile file, @RequestHeader("clientID") String clientID, 
-		@RequestHeader("clientPass") String clientPass, String MetadatoEstadoElaboracion, String MetadatoOrganos, String MetadatoClasificacion, 
-		String MetadatoVersionNTI, String MetadatoInteresados, String MetadatoIdentificador) 
-		throws IOException, JAXBException, ConverterException, ExpedientENIValidationException{
+	public ResponseEntity<String> GenerateExpedienteENI(
+		@RequestPart("file") MultipartFile file, 
+		@RequestHeader("clientID") String clientID, 
+		@RequestHeader("clientPass") String clientPass, 
+		String MetadatoEstadoElaboracion, 
+		String MetadatoOrganos, 
+		String MetadatoClasificacion, 
+		String MetadatoVersionNTI, 
+		String MetadatoInteresados, 
+		String MetadatoIdentificador) throws IOException, JAXBException, ConverterException, ExpedientENIValidationException{
 
 		GregorianCalendar gc = GregorianCalendar.from(ZonedDateTime.now());
 		GenerateExpedientENIImpl geENI = new GenerateExpedientENIImpl();
