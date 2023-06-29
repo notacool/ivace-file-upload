@@ -31,6 +31,7 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -817,6 +818,7 @@ public class FileUploadController {
 	@ResponseBody
 	public ResponseEntity<String> GenerateDocumentENI(
 		@RequestPart("file") MultipartFile file, 
+		String pathDestinoLocal,
 		String MetadatoEstadoElaboracion,
 		String MetadatoOrganos, 
 		String MetadatoIdDocumento, 
@@ -883,7 +885,9 @@ public class FileUploadController {
 		eni.setContenidoDocumento(obDocContenido);
 
 		if (ValidateENI(eni)) {
-			gdENI.generateENIToFile(eni);
+			InputStream fis = gdENI.generateENI(eni);
+			File f = new File(pathDestinoLocal + "\\" + MetadatoIdDocumento + ".xml");
+			FileUtils.copyInputStreamToFile(fis, f);
 			return new ResponseEntity<>(null, HttpStatus.OK);
 		} else {
 			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
@@ -967,7 +971,7 @@ public class FileUploadController {
 		if (ValidateENI(eni)) {
 			File f = gdENI.generateENIToFile(eni);
 			FileInputStream input = new FileInputStream(f);
-			MultipartFile multipartFile = new MockMultipartFile(f.getName(), IOUtils.toByteArray(input));	
+			MultipartFile multipartFile = new MockMultipartFile(f.getName(), f.getName(), null, IOUtils.toByteArray(input));	
 			uploadToAlfresco(multipartFile, codArea, codAnio, codConvocatoria, codExpediente, codProceso, codDocumentacion, 
 				user, password, authorizationHeader, gustavoId, ulisesId);
 
