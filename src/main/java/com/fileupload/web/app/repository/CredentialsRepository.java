@@ -12,5 +12,4 @@ public interface CredentialsRepository extends CrudRepository<TCredentials, Inte
 
 	@Query("Select tc from TCredentials tc where tc.clientID = :clientID and tc.clientPass = :clientPass")
 	TCredentials checkCredentials(@Param("clientID") String clientID, @Param("clientPass") String clientPass);
-	
 }

@@ -6,17 +6,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.xml.bind.JAXBException;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Folder;
@@ -34,6 +30,12 @@ import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.poi.EncryptedDocumentException;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,12 +48,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.client.RestTemplate;
@@ -63,44 +64,38 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fileupload.web.app.model.CuadroClasificacionDataSets;
+import com.fileupload.web.app.model.Path;
 import com.fileupload.web.app.model.RootObject;
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
+import com.fileupload.web.app.repository.PathRepository;
 import com.fileupload.web.app.security.JwtUtils;
 import com.fileupload.web.app.validator.RequestValidator;
 
 import es.gob.aapp.libreriaENI.exception.document.DocumentENIValidationException;
-import es.gob.aapp.libreriaENI.exception.expedient.ConverterException;
-import es.gob.aapp.libreriaENI.exception.expedient.ExpedientENIValidationException;
 import es.gob.aapp.libreriaENI.model.documento.ObjetoDocumentoENI;
 import es.gob.aapp.libreriaENI.model.documento.contenido.ObjetoDocumentoContenido;
-import es.gob.aapp.libreriaENI.model.documento.firma.ContenidoFirmaCertificado;
-import es.gob.aapp.libreriaENI.model.documento.firma.ContenidoFirmaCertificadoReferencia;
 import es.gob.aapp.libreriaENI.model.documento.firma.FirmaENI;
 import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatos;
 import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatosEstadoElaboracion;
-import es.gob.aapp.libreriaENI.model.expediente.ObjetoExpedienteENI;
-import es.gob.aapp.libreriaENI.model.expediente.indice.ObjetoExpedienteIndice;
-import es.gob.aapp.libreriaENI.model.expediente.metadatos.ObjetoExpedienteMetadatos;
-import es.gob.aapp.libreriaENI.model.expediente.metadatos.ObjetoExpedienteMetadatosEnumeracionEstados;
-import es.gob.aapp.libreriaENI.model.expediente.version.ObjetoExpedienteVersion;
 import es.gob.aapp.libreriaENI.service.impl.GenerateDocumentENIImpl;
-import es.gob.aapp.libreriaENI.service.impl.GenerateExpedientENIImpl;
 import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoEstadoElaboracion;
 import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoTipoDocumental;
 import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoTipoFirma;
 import es.gob.aapp.libreriaENI.valide.ValideDocumentENI;
 import io.swagger.annotations.Api;
 
-
 @Api(description = "Servicio para comunicar aplicaciones externas con el Gestor Documental del IVACE.", tags = "API de comunicacion con Alfresco")
 @Controller
 public class FileUploadController {
 
+	Logger logger = LoggerFactory.getLogger(FileUploadController.class);
+
 	@Autowired
 	CredentialsRepository credRepo;
 
-	Logger logger = LoggerFactory.getLogger(FileUploadController.class);
+	@Autowired
+	PathRepository pathRepository;
 
 	@Autowired
 	CuadroClasificacionDataSets cuadroClasificacion;
@@ -108,30 +103,35 @@ public class FileUploadController {
 	@Autowired
 	RequestValidator validator;
 
-	// @Value("${alfresco.user}")
-	// private String user;
-	// @Value("${alfresco.pass}")
-	// private String pass;
 	@Value("${alfresco.url}")
 	private String url;
+
 	@Value("${alfresco.documentLibrary}")
 	private String documentLibrary;
 
-	@PostMapping("/uploadFile/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}")
-	@ResponseBody
+	@Value("${alfresco.excelPath}")
+	private String excelPath;
+
+	@PostMapping("/upload/{nomArea}/{nomAnio}/{nomConvocatoria}/{nomExpediente}/{nomProceso}/{nomDocumentacion}/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}") @ResponseBody
 	public ResponseEntity<String> uploadToAlfresco(
-		@RequestPart("file") MultipartFile file,
-		@PathVariable("codArea") String codArea, 
-		@PathVariable("codAnio") String codAnio,
-		@PathVariable("codConvocatoria") String codConvocatoria,
-		@PathVariable("codExpediente") String codExpediente, 
-		@PathVariable("codProceso") String codProceso,
-		@PathVariable("codDocumentacion") String codDocumentacion, 
-		@RequestHeader(value = "user", required = true) String user,
-		@RequestHeader(value = "password", required = true) String password, 
-		@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-		@RequestHeader(value = "gustavoId", required = false) String gustavoId,
-		@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
+			@RequestPart("file") MultipartFile file,
+			@PathVariable("nomArea") String nomArea,
+			@PathVariable("nomAnio") String nomAnio,
+			@PathVariable("nomConvocatoria") String nomConvocatoria,
+			@PathVariable("nomExpediente") String nomExpediente,
+			@PathVariable("nomProceso") String nomProceso,
+			@PathVariable("nomDocumentacion") String nomDocumentacion,
+			@PathVariable("codArea") String codArea,
+			@PathVariable("codAnio") String codAnio,
+			@PathVariable("codConvocatoria") String codConvocatoria,
+			@PathVariable("codExpediente") String codExpediente,
+			@PathVariable("codProceso") String codProceso,
+			@PathVariable("codDocumentacion") String codDocumentacion,
+			@RequestHeader(value = "user", required = true) String user,
+			@RequestHeader(value = "password", required = true) String password,
+			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
+			@RequestHeader(value = "gustavoId", required = true) String gustavoId,
+			@RequestHeader(value = "ulisesId", required = true) String ulisesId) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -139,20 +139,6 @@ public class FileUploadController {
 		}
 
 		try {
-			String[] metadata = new String[6];
-			metadata[0] = codArea;
-			metadata[1] = codAnio;
-			metadata[2] = codConvocatoria;
-			metadata[3] = codExpediente;
-			metadata[4] = codProceso;
-			metadata[5] = codDocumentacion;
-			String documentDestination;
-			documentDestination = "Sites/ivace/documentLibrary/" + codArea + "/" + codAnio + "/" + codConvocatoria + "/"
-					+ codExpediente + "/" + codProceso + "/" + codDocumentacion;
-
-			if (!validator.isValidRequest(metadata)) {
-				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-			}
 
 			byte[] fileContent = file.getBytes();
 			Boolean fileExists = false;
@@ -171,18 +157,16 @@ public class FileUploadController {
 			Session session = factory.getRepositories(parameter).get(0).createSession();
 			Folder root = session.getRootFolder();
 
+			Path newPath = new Path(codArea, nomArea, codAnio, nomAnio, codConvocatoria, nomConvocatoria, codExpediente,
+					nomExpediente,
+					codProceso, nomProceso, codDocumentacion, nomDocumentacion);
+
 			// Creamos las carpetas, pueden ser una o 50
 			Folder parent = root;
-			String[] parts = null;
-			if (documentDestination.contains("/")) {
-				parts = documentDestination.split("/");
-			} else {
-				parts = new String[1];
-				parts[0] = documentDestination;
-			}
 
-			for (String folderName : parts) {
-				parent = createFolder(folderName, parent, "", "", user, password);
+			String[] aux = newPath.getNomPath().split("/");
+			for (int index = 0; index < aux.length; index++) {
+				parent = createFolder(parent, newPath, index, user, password);
 			}
 
 			// Creamos el archivo si no existe
@@ -194,7 +178,6 @@ public class FileUploadController {
 
 			// Devolvemos false si el archivo ya existe
 			if (fileExists) {
-				System.out.println("Ya hay un archivo con ese nombre");
 				return ResponseEntity.badRequest().body("Ya hay un archivo con ese nombre");
 			}
 
@@ -208,19 +191,22 @@ public class FileUploadController {
 					BigInteger.valueOf(fileContent.length), "text/plain", stream);
 
 			// Creamos el documento en el Alfresco
-			CmisObject o = parent.createDocument(properties2, contentStream, VersioningState.MAJOR);
+			CmisObject o = parent.createDocument(properties2, contentStream,
+					VersioningState.MAJOR);
 			// Check gustavo/ulises UniqueConstraint
 			String constraintViolationFound = "";
 			try {
 				if (gustavoId != "" && gustavoId != null) {
-					constraintViolationFound = find((Folder) root, Integer.parseInt(gustavoId), 0);
+					constraintViolationFound = find((Folder) root, Integer.parseInt(gustavoId),
+							0);
 					if (constraintViolationFound != "") {
 						logger.info("Could not set GustavoID - Constraint violation found.");
 						return ResponseEntity.status(HttpStatus.OK).build();
 					}
 				}
 				if (ulisesId != "" && ulisesId != null) {
-					constraintViolationFound = find((Folder) root, Integer.parseInt(ulisesId), 0);
+					constraintViolationFound = find((Folder) root, Integer.parseInt(ulisesId),
+							0);
 					if (constraintViolationFound != "") {
 						logger.info("Could not set UlisesID - Constraint violation found.");
 						return ResponseEntity.status(HttpStatus.OK).build();
@@ -250,8 +236,7 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/login")
-	@ResponseBody
+	@PostMapping("/login") @ResponseBody
 	public String login(@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		logger.info("login attemp");
@@ -263,9 +248,9 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/delete-tags")
-	@ResponseBody
-	public void deleteAllTags(String user, String pass) throws JsonMappingException, JsonProcessingException {
+	@PostMapping("/delete-tags") @ResponseBody
+	public void deleteAllTags(String user, String pass)
+			throws JsonMappingException, JsonProcessingException {
 
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
@@ -417,152 +402,18 @@ public class FileUploadController {
 		restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 	}
 
-	@PostMapping("/generateDirStructure")
-	@ResponseBody
-	public String generateDirStruct(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-		@PathVariable("user") String user, @PathVariable("pass") String pass) {
-		if (!JwtUtils.verifyToken(authorizationHeader)
-				|| !JwtUtils.extractSubject(authorizationHeader).equals("NOTACOOLADMIN")) {
-			System.out.println("Invalid JWT");
-			return "";
-		}
+	@GetMapping("/getByGustavo") @ResponseBody
+	public ResponseEntity<byte[]> getByGustavoId(
+			@RequestHeader(value = "user", required = true) String user,
+			@RequestHeader(value = "password", required = true) String pass,
+			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
+			@RequestHeader(value = "gustavoID", required = true) int gustavoID) {
 
-		ArrayList<String> listNom = new ArrayList<String>();
-		ArrayList<String> listCod = new ArrayList<String>();
-		String[] codLiterals = new String[5];
-		String[] nomLiterals = new String[5];
-		cuadroClasificacion.getMapaAreas().forEach((k, v) -> {
-			logger.info(k + " " + v);
-			codLiterals[0] = documentLibrary + k;
-			nomLiterals[0] = documentLibrary + v;
-			listCod.add(documentLibrary + k);
-			listNom.add(documentLibrary + v);
-			cuadroClasificacion.getMapaAnios().forEach((i, b) -> {
-				listCod.add(codLiterals[0] + "/" + i);
-				listNom.add(nomLiterals[0] + "/" + b);
-				codLiterals[1] = codLiterals[0] + "/" + i;
-				nomLiterals[1] = nomLiterals[0] + "/" + b;
-				cuadroClasificacion.getMapaConvocatorias().forEach((c, r) -> {
-					listCod.add(codLiterals[1] + "/" + c);
-					listNom.add(nomLiterals[1] + "/" + r);
-					codLiterals[2] = codLiterals[1] + "/" + c;
-					nomLiterals[2] = nomLiterals[1] + "/" + r;
-					cuadroClasificacion.getMapaExpedientes().forEach((l, m) -> {
-						listCod.add(codLiterals[2] + "/" + l);
-						listNom.add(nomLiterals[2] + "/" + m);
-						codLiterals[3] = codLiterals[2] + "/" + l;
-						nomLiterals[3] = nomLiterals[2] + "/" + m;
-						cuadroClasificacion.getMapaProcesos().forEach((q, w) -> {
-							listCod.add(codLiterals[3] + "/" + q);
-							listNom.add(nomLiterals[3] + "/" + w);
-							codLiterals[4] = codLiterals[3] + "/" + q;
-							nomLiterals[4] = nomLiterals[3] + "/" + w;
-							LinkedHashMap<String, String> mapaActual = new LinkedHashMap<>();
-							switch (q) {
-								case "P01":
-									mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoSolicitudes();
-									break;
-								case "P02":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoPreevaluaciontecnico();
-									break;
-								case "P03":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoComisionEvaluacionivace();
-									break;
-								case "P04":
-									mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoResolucionconcesion();
-									break;
-								case "P05":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoComunicacionconcesionabeneficiario();
-									break;
-								case "P06":
-									mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoAnticipoprestamo();
-									break;
-								case "P07":
-									mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoEjecuciondeproyecto();
-									break;
-								case "P08":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoJustificacionproyecto();
-									break;
-								case "P09":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoVerificaciondocumental();
-									break;
-								case "P10":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoVerificacionmaterial();
-									break;
-								case "P11":
-									mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificacionfinal();
-									break;
-								case "P12":
-									mapaActual = cuadroClasificacion
-											.getMapaDocumentacionesProcesoComunicacionserviciopago();
-									break;
-								case "P13":
-									mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoPagosubvencion();
-									break;
-							}
-							mapaActual.forEach((d, s) -> {
-								listCod.add(codLiterals[4] + "/" + d);
-								listNom.add(nomLiterals[4] + "/" + s);
-							});
-						});
-					});
-				});
-			});
-		});
-
-		// Configuraciones básicas para para conectarse
-		SessionFactory factory = SessionFactoryImpl.newInstance();
-		Map<String, String> parameter = new HashMap<String, String>();
-
-		// Credenciales del usuario y url de conexión
-		parameter.put(SessionParameter.USER, user);
-		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
-		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-
-		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
-		List<Repository> repositories = factory.getRepositories(parameter);
-		Session session = repositories.get(0).createSession();
-		Folder root = session.getRootFolder();
-
-		// Creamos las carpetas, pueden ser una o 50
-		Folder parent = root;
-		String[] parts = null;
-
-		// recorremos la lista de directorios
-		for (int i = 0; i < listCod.size(); i++) {
-			parent = root;
-			if (listNom.get(i).contains("/")) {
-				parts = listNom.get(i).split("/");
-			} else {
-				parts = new String[1];
-				parts[0] = listNom.get(i);
-			}
-
-			for (String folderName : parts) {
-				parent = createFolder(folderName, parent, listCod.get(i), listNom.get(i), user, pass);
-			}
-			logger.info("Creando el directorio: " + listNom.get(i));
-		}
-		logger.info("Terminados de crear los " + listCod.size() + " directorios");
-
-		return "";
-	}
-
-	@GetMapping("/getByGustavo")
-	@ResponseBody
-	public ResponseEntity<byte[]> getByGustavoId(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader("gustavoID") int gustavoID, @PathVariable("user") String user, @PathVariable("pass") String pass) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
+
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 
@@ -635,10 +486,12 @@ public class FileUploadController {
 		return fileId;
 	}
 
-	@GetMapping("/getByUlises")
-	@ResponseBody
-	public ResponseEntity<byte[]> getByUlisesId(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader("ulisesID") int ulisesID, @PathVariable("user") String user, @PathVariable("pass") String pass) {
+	@GetMapping("/getByUlises") @ResponseBody
+	public ResponseEntity<byte[]> getByUlisesId(
+			@RequestHeader(value = "user", required = true) String user,
+			@RequestHeader(value = "password", required = true) String pass,
+			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
+			@RequestHeader(value = "ulisesID", required = true) int ulisesID) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -681,119 +534,55 @@ public class FileUploadController {
 
 	}
 
-	public Folder createFolder(String folderName, Folder root, String fullPathCod, String fullPathNom, String user, String pass) {
+	public Folder createFolder(Folder root, Path path, Integer index, String user, String pass) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
+
+		String[] fullNomPathSplitted = path.getNomPath().split("/");
+
 		properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
-		properties.put(PropertyIds.NAME, folderName);
+		properties.put(PropertyIds.NAME, fullNomPathSplitted[index]);
 		String description = null;
 		String title = null;
-		String tag = "";
 
 		Folder parent = null;
 		for (CmisObject r : root.getChildren()) {
-			if (r.getName().equals(folderName)) {
+			if (r.getName().equals(fullNomPathSplitted[index])) {
 				folderExists = true;
 				parent = (Folder) r;
 			}
 		}
-
 		// create the folder
 		if (!folderExists) {
-			LinkedHashMap<String, String> mapaAsociado = new LinkedHashMap<>();
-			String[] splittedPathNom = fullPathNom.split("/");
-			String[] splittedPathCod = fullPathCod.split("/");
-			if (splittedPathNom.length == 4) {
+			if (index == 3) {
 				logger.info("Estamos creando el Area");
-				mapaAsociado = cuadroClasificacion.getMapaAreas();
-				description = splittedPathNom[3];
-				tag = description;
-				title = splittedPathCod[3];
+				description = path.getDescripcionArea();
+				title = path.getTituloArea();
 			}
-			if (splittedPathNom.length == 5) {
+			if (index == 4) {
 				logger.info("Estamos creando el Año");
-				mapaAsociado = cuadroClasificacion.getMapaAnios();
-				description = splittedPathNom[3] + " " + splittedPathNom[4];
-				title = splittedPathCod[3] + " " + splittedPathCod[4];
-				tag = description;
+				description = path.getDescripcionAnho();
+				title = path.getTituloAnho();
 			}
-			if (splittedPathNom.length == 6) {
+			if (index == 5) {
 				logger.info("Estamos creando la convocatoria");
-				mapaAsociado = cuadroClasificacion.getMapaConvocatorias();
-				description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5];
-				title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5];
-				tag = description;
+				description = path.getDescripcionConvocatoria();
+				title = path.getTituloConvocatoria();
 			}
-			if (splittedPathNom.length == 7) {
+			if (index == 6) {
 				logger.info("Estamos creando el expediente");
-				mapaAsociado = cuadroClasificacion.getMapaExpedientes();
-				description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
-						+ splittedPathNom[6];
-				title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
-						+ splittedPathCod[6];
-				tag = description;
+				description = path.getDescripcionExpediente();
+				title = path.getTituloExpediente();
 			}
-			if (splittedPathNom.length == 8) {
+			if (index == 7) {
 				logger.info("Estamos creando el proceso");
-				mapaAsociado = cuadroClasificacion.getMapaProcesos();
-				description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
-						+ splittedPathNom[6] + " " + splittedPathNom[7].substring(4, splittedPathNom[7].length());
-				title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
-						+ splittedPathCod[6] + " " + splittedPathNom[7].substring(4, splittedPathNom[7].length());
-				tag = description;
+				description = path.getDescripcionProceso();
+				title = path.getTituloProceso();
 			}
-			if (splittedPathNom.length == 9) {
+			if (index == 8) {
 				logger.info("Estamos creando el documento");
-				switch (splittedPathNom[7]) {
-					case "P01":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P01");
-						break;
-					case "P02":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P02");
-						break;
-					case "P03":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P03");
-						break;
-					case "P04":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P04");
-						break;
-					case "P05":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P05");
-						break;
-					case "P06":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P06");
-						break;
-					case "P07":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P07");
-						break;
-					case "P08":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P08");
-						break;
-					case "P09":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P09");
-						break;
-					case "P10":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P10");
-						break;
-					case "P11":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P11");
-						break;
-					case "P12":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P12");
-						break;
-					case "P13":
-						mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P13");
-						break;
-				}
-				logger.info(mapaAsociado.toString());
-				description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
-						+ splittedPathNom[6] + " " + splittedPathNom[7].substring(4, splittedPathNom[7].length()) + " "
-						+ splittedPathNom[8].substring(4, splittedPathNom[8].length());
-
-				title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
-						+ splittedPathCod[6] + " " + splittedPathCod[7] + " " + splittedPathCod[8];
-
-				tag = description;
+				description = path.getDescripcionDocumentacion();
+				title = path.getTituloDocumentacion();
 			}
 
 			properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
@@ -805,24 +594,18 @@ public class FileUploadController {
 			properties.put(PropertyIds.DESCRIPTION, description);
 
 			parent = root.createFolder(properties);
-
-			if (tag.length() != 0) {
-				generateFolderTag(fullPathNom, tag, user, pass);
-			}
-
 		}
 		return parent;
 	}
 
-	@PostMapping("/generate-eni")
-	@ResponseBody
+	@PostMapping("/generate-eni") @ResponseBody
 	public ResponseEntity<String> GenerateDocumentENI(
-		@RequestPart("file") MultipartFile file, 
-		String pathDestinoLocal,
-		String MetadatoEstadoElaboracion,
-		String MetadatoOrganos, 
-		String MetadatoIdDocumento, 
-		String MetadatoVersionNTI) throws IOException, Exception {
+			@RequestPart("file") MultipartFile file,
+			String pathDestinoLocal,
+			String MetadatoEstadoElaboracion,
+			String MetadatoOrganos,
+			String MetadatoIdDocumento,
+			String MetadatoVersionNTI) throws IOException, Exception {
 
 		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
 		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
@@ -831,10 +614,10 @@ public class FileUploadController {
 		GregorianCalendar gCalendar = new GregorianCalendar();
 		ArrayList<String> organos = new ArrayList<String>();
 
-		if(!validator.isValidDocumentId(MetadatoIdDocumento)){
-			return new ResponseEntity<>
-				("Identificador introducido no válido. Debe ser de la forma ES_LLNNNNNNN_NNNN_XXXXXXX con un máximo de 52 caracteres (L = Letra, N = Numeros).", 
-				HttpStatus.BAD_REQUEST);
+		if (!validator.isValidDocumentId(MetadatoIdDocumento)) {
+			return new ResponseEntity<>(
+					"Identificador introducido no válido. Debe ser de la forma ES_LLNNNNNNN_NNNN_XXXXXXX con un máximo de 52 caracteres (L = Letra, N = Numeros).",
+					HttpStatus.BAD_REQUEST);
 		}
 
 		organos.add(MetadatoOrganos);
@@ -894,26 +677,31 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/generate-eni-and-upload-to-alfresco")
-	@ResponseBody
+	@PostMapping("/generate-eni-and-upload-to-alfresco") @ResponseBody
 	public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(
-		@RequestPart("file") MultipartFile file,
-		@RequestHeader("user") String user, 
-		@RequestHeader("password") String password, 
-		@RequestHeader(value = "Authorization", required = false) String authorizationHeader, 
-		@RequestHeader(value = "gustavoId", required = false) String gustavoId, 
-		@RequestHeader(value = "ulisesId", required = false) String ulisesId, 
-		String MetadatoEstadoElaboracion,
-		String MetadatoOrganos, 
-		String MetadatoIdDocumento, 
-		String MetadatoVersionNTI, 
-		String pathDestino, 
-		String codArea, 
-		String codAnio, 
-		String codConvocatoria, 
-		String codExpediente, 
-		String codProceso, 
-		String codDocumentacion) throws IOException, Exception {
+			@RequestPart("file") MultipartFile file,
+			@RequestHeader("user") String user,
+			@RequestHeader("password") String password,
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
+			@RequestHeader(value = "ulisesId", required = false) String ulisesId,
+			String MetadatoEstadoElaboracion,
+			String MetadatoOrganos,
+			String MetadatoIdDocumento,
+			String MetadatoVersionNTI,
+			String pathDestino,
+			String codArea,
+			String codAnio,
+			String codConvocatoria,
+			String codExpediente,
+			String codProceso,
+			String codDocumentacion,
+			String nomArea,
+			String nomAnio,
+			String nomConvocatoria,
+			String nomExpediente,
+			String nomProceso,
+			String nomDocumentacion) throws IOException, Exception {
 
 		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
 		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
@@ -944,6 +732,7 @@ public class FileUploadController {
 				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
 				break;
 		}
+
 		obMetadatos.setEstadoElaboracion(estEl);
 		obMetadatos.setVersionNTI(MetadatoVersionNTI);
 		obMetadatos.setIdentificadorDocumento(MetadatoIdDocumento);
@@ -971,9 +760,12 @@ public class FileUploadController {
 		if (ValidateENI(eni)) {
 			File f = gdENI.generateENIToFile(eni);
 			FileInputStream input = new FileInputStream(f);
-			MultipartFile multipartFile = new MockMultipartFile(f.getName(), f.getName(), null, IOUtils.toByteArray(input));	
-			uploadToAlfresco(multipartFile, codArea, codAnio, codConvocatoria, codExpediente, codProceso, codDocumentacion, 
-				user, password, authorizationHeader, gustavoId, ulisesId);
+			MultipartFile multipartFile = new MockMultipartFile(
+					f.getName().substring(0, f.getName().indexOf('-')) + ".xml",
+					f.getName().substring(0, f.getName().indexOf('-')) + ".xml", null,
+					IOUtils.toByteArray(input));
+			uploadToAlfresco(multipartFile, nomArea, nomAnio, nomConvocatoria, nomExpediente, nomProceso, nomDocumentacion, codArea, codAnio, 
+				codConvocatoria, codExpediente, codProceso, codDocumentacion, user, password, authorizationHeader, gustavoId, ulisesId);
 
 			return new ResponseEntity<>(null, HttpStatus.OK);
 		} else {
@@ -990,98 +782,259 @@ public class FileUploadController {
 		return true;
 	}
 
-	@RequestMapping(
-		path = "/generate-expediente", 
-		method = RequestMethod.POST, 
-		consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseEntity<String> GenerateExpedienteENI(
-		@RequestPart("file") MultipartFile file, 
-		@RequestHeader("clientID") String clientID, 
-		@RequestHeader("clientPass") String clientPass, 
-		String MetadatoEstadoElaboracion, 
-		String MetadatoOrganos, 
-		String MetadatoClasificacion, 
-		String MetadatoVersionNTI, 
-		String MetadatoInteresados, 
-		String MetadatoIdentificador) throws IOException, JAXBException, ConverterException, ExpedientENIValidationException{
+	@PostMapping("/createPathsFromExcel") @ResponseBody @Transactional(readOnly = false)
+	public ResponseEntity<String> CreatePaths(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader)
+			throws EncryptedDocumentException, IOException {
+		if (!JwtUtils.verifyToken(authorizationHeader)) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+		
+		try {
+			DataFormatter dataFormatter = new DataFormatter();
 
-		GregorianCalendar gc = GregorianCalendar.from(ZonedDateTime.now());
-		GenerateExpedientENIImpl geENI = new GenerateExpedientENIImpl();
-		ObjetoExpedienteENI objetoExpedienteENI = new ObjetoExpedienteENI();
-		ObjetoExpedienteIndice objetoExpedienteIndice = new ObjetoExpedienteIndice();
-		ObjetoExpedienteMetadatos objetoExpedienteMetadatos = new ObjetoExpedienteMetadatos();
-		ObjetoExpedienteMetadatosEnumeracionEstados estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
-		ObjetoExpedienteVersion objetoExpedienteVersion = new ObjetoExpedienteVersion(1, gc);
-		Calendar fechaAperturaExpediente = Calendar.getInstance();
-		// ObjetoExpedienteIndiceContenido objetoExpedienteIndiceContenido = new ObjetoExpedienteIndiceContenido();
-		List<String> listInteresados = new ArrayList<>();	
-		listInteresados.add(MetadatoInteresados);
-		List<String> listOrganos = new ArrayList<>();
-		listOrganos.add(MetadatoOrganos);	
+			int iRow = 1;
 
-		//METADATOS
-		switch (MetadatoEstadoElaboracion) {
-			default:
-				estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
-				break;
-			case "ABIERTO":
-				estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
-				break;
-			case "CERRADO":
-				estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_02;
-				break;
-			case "INDICE PARA REMISION CERRADO":
-				estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_03;
-				break;
-		}	
+			File f = new File(excelPath);
+			InputStream inp = new FileInputStream(f);
+			Workbook wb = WorkbookFactory.create(inp);
+			Sheet sheet = wb.getSheetAt(0);
 
-		objetoExpedienteMetadatos.setIdentificadorExpediente(MetadatoIdentificador);
-		objetoExpedienteMetadatos.setOrgano(listOrganos);
-		objetoExpedienteMetadatos.setClasificacion(MetadatoClasificacion);
-		objetoExpedienteMetadatos.setEstado(estado);
-		objetoExpedienteMetadatos.setFechaAperturaExpediente(fechaAperturaExpediente);
-		objetoExpedienteMetadatos.setInteresado(listInteresados);
-		objetoExpedienteMetadatos.setVersionNTI(MetadatoVersionNTI);
+			Row row = sheet.getRow(iRow);
+			while (row != null) {
 
-		objetoExpedienteENI.setMetadatos(objetoExpedienteMetadatos);
+				if (pathRepository.findByCodigos(dataFormatter.formatCellValue(row.getCell(1)).trim(),
+						dataFormatter.formatCellValue(row.getCell(5)).trim(),
+						dataFormatter.formatCellValue(row.getCell(9)).trim(),
+						dataFormatter.formatCellValue(row.getCell(13)).trim(),
+						dataFormatter.formatCellValue(row.getCell(17)).trim(),
+						dataFormatter.formatCellValue(row.getCell(21)).trim()) == null) {
 
-		// INDICE
-		ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
-		ContenidoFirmaCertificado contenidoFirmaCertificado = new ContenidoFirmaCertificadoReferencia();
-		listFirmas.add(new FirmaENI());
-		listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_03);
-		listFirmas.get(0).setContenidoFirmaDocument(contenidoFirmaCertificado);
+					Path newPath = new Path();
+					int i = 0;
 
-		// List<ObjetoExpedienteIndiceContenidoElementoIndizado> listObjetoExpedienteIndiceContenidoElementoIndizados = 
-		// 	new ArrayList<ObjetoExpedienteIndiceContenidoElementoIndizado>();
-		// ObjetoExpedienteIndiceContenidoElementoIndizado objetoExpedienteIndiceContenidoElementoIndizado = 
-		// 	new ObjetoExpedienteIndiceContenidoElementoIndizado() {};
-		// objetoExpedienteIndiceContenidoElementoIndizado.setOrden(1);
+					newPath.setNomArea(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodArea(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setTituloArea(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setDescripcionArea(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setNomAnho(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodAnho(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setTituloAnho(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setDescripcionAnho(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setNomConvocatoria(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodConvocatoria(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setTituloConvocatoria(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setDescripcionConvocatoria(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setNomExpediente(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodExpediente(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setTituloExpediente(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setDescripcionExpediente(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setNomProceso(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodProceso(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setTituloProceso(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setDescripcionProceso(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setNomDocumentacion(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodDocumentacion(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setTituloDocumentacion(dataFormatter.formatCellValue(row.getCell(i)));
+					i++;
+					newPath.setDescripcionDocumentacion(dataFormatter.formatCellValue(row.getCell(i)));
 
-		// listObjetoExpedienteIndiceContenidoElementoIndizados.add(objetoExpedienteIndiceContenidoElementoIndizado);
+					newPath.setNomPath(
+							documentLibrary + newPath.getNomArea() + "/" + newPath.getNomAnho() + "/"
+									+ newPath.getNomConvocatoria() + "/" +
+									newPath.getNomExpediente() + "/" + newPath.getNomProceso() + "/"
+									+ newPath.getNomDocumentacion());
 
-		// objetoExpedienteIndiceContenido.setIdentificadorExpedienteAsociado("EXP_INDICE_CONTENIDO" + MetadatoIdentificador);
-		// objetoExpedienteIndiceContenido.setFechaIndiceElectronico(Calendar.getInstance());
-		// objetoExpedienteIndiceContenido.setOrden(1);
-		// objetoExpedienteIndiceContenido.setElementosIndizados(listObjetoExpedienteIndiceContenidoElementoIndizados);
+					newPath.setCodPath(
+							documentLibrary + newPath.getCodArea() + "/" + newPath.getCodAnho() + "/"
+									+ newPath.getCodConvocatoria() + "/" +
+									newPath.getCodExpediente() + "/" + newPath.getCodProceso() + "/"
+									+ newPath.getCodDocumentacion());
 
-		objetoExpedienteIndice.setFirmas(listFirmas);
-		// objetoExpedienteIndice.setIndiceContenido(objetoExpedienteIndiceContenido);
+					pathRepository.create(newPath);
 
-		objetoExpedienteENI.setIndice(objetoExpedienteIndice);
+					iRow++;
+					row = sheet.getRow(iRow);
+				}
+			}
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
 
-		//CONTENIDO
-		ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-		InputStream fileStream = file.getInputStream();
-		String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-		obDocContenido.setContenido(fileStream);
-		obDocContenido.setNombreFormato(extension);
-		objetoExpedienteENI.setVisualizacionIndice(obDocContenido);
-
-		objetoExpedienteENI.setVersion(objetoExpedienteVersion);
-
-		geENI.generateENIToFile(objetoExpedienteENI);
-
-		return new ResponseEntity<>(null, HttpStatus.OK);
+		return ResponseEntity.status(HttpStatus.OK).build();
 	}
+
+	@PostMapping("/GenerateDirectoryStructure") @ResponseBody
+	public String GenerateDirectoryStructure(
+		@RequestHeader(value = "Authorization", required = false) String authorizationHeader, String user,
+			String pass) {
+				if (!JwtUtils.verifyToken(authorizationHeader)
+				|| !JwtUtils.extractSubject(authorizationHeader).equals("NOTACOOLADMIN")) {
+					System.out.println("Invalid JWT");
+			return "";
+		}
+		
+		List<Path> allPaths = pathRepository.findAll();
+		
+		if (allPaths.size() == 0) {
+			return "No existen paths";
+		} else {
+			// Configuraciones básicas para para conectarse
+			SessionFactory factory = SessionFactoryImpl.newInstance();
+			Map<String, String> parameter = new HashMap<String, String>();
+
+			// Credenciales del usuario y url de conexión
+			parameter.put(SessionParameter.USER, user);
+			parameter.put(SessionParameter.PASSWORD, pass);
+			parameter.put(SessionParameter.ATOMPUB_URL, url);
+			parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+
+			// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+			List<Repository> repositories = factory.getRepositories(parameter);
+			Session session = repositories.get(0).createSession();
+			Folder root = session.getRootFolder();
+
+			for (int i = 0; i < allPaths.size(); i++) {
+
+				// Creamos las carpetas, pueden ser una o 50
+				Folder parent = root;
+
+				String[] aux = allPaths.get(i).getNomPath().split("/");
+				for (int index = 0; index < aux.length; index++) {
+					parent = createFolder(parent, allPaths.get(i), index, user, pass);
+				}
+			}
+		}
+
+		logger.info("Terminados de crear los " + allPaths.size() + " directorios");
+
+		return "";
+	}
+
+	// @RequestMapping(path = "/generate-expediente", method = RequestMethod.POST,
+	// consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	// public ResponseEntity<String> GenerateExpedienteENI(
+	// @RequestPart("file") MultipartFile file,
+	// @RequestHeader("clientID") String clientID,
+	// @RequestHeader("clientPass") String clientPass,
+	// String MetadatoEstadoElaboracion,
+	// String MetadatoOrganos,
+	// String MetadatoClasificacion,
+	// String MetadatoVersionNTI,
+	// String MetadatoInteresados,
+	// String MetadatoIdentificador)
+	// throws IOException, JAXBException, ConverterException,
+	// ExpedientENIValidationException {
+	
+	// GregorianCalendar gc = GregorianCalendar.from(ZonedDateTime.now());
+	// GenerateExpedientENIImpl geENI = new GenerateExpedientENIImpl();
+	// ObjetoExpedienteENI objetoExpedienteENI = new ObjetoExpedienteENI();
+	// ObjetoExpedienteIndice objetoExpedienteIndice = new ObjetoExpedienteIndice();
+	// ObjetoExpedienteMetadatos objetoExpedienteMetadatos = new
+	// ObjetoExpedienteMetadatos();
+	// ObjetoExpedienteMetadatosEnumeracionEstados estado =
+	// ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
+	// ObjetoExpedienteVersion objetoExpedienteVersion = new
+	// ObjetoExpedienteVersion(1, gc);
+	// Calendar fechaAperturaExpediente = Calendar.getInstance();
+	// ObjetoExpedienteIndiceContenido objetoExpedienteIndiceContenido = new
+	// ObjetoExpedienteIndiceContenido();
+	// List<String> listInteresados = new ArrayList<>();
+	// listInteresados.add(MetadatoInteresados);
+	// List<String> listOrganos = new ArrayList<>();
+	// listOrganos.add(MetadatoOrganos);
+	
+	// // METADATOS
+	// switch (MetadatoEstadoElaboracion) {
+	// default:
+	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
+	// break;
+	// case "ABIERTO":
+	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
+	// break;
+	// case "CERRADO":
+	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_02;
+	// break;
+	// case "INDICE PARA REMISION CERRADO":
+	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_03;
+	// break;
+	// }
+	
+	// objetoExpedienteMetadatos.setIdentificadorExpediente(MetadatoIdentificador);
+	// objetoExpedienteMetadatos.setOrgano(listOrganos);
+	// objetoExpedienteMetadatos.setClasificacion(MetadatoClasificacion);
+	// objetoExpedienteMetadatos.setEstado(estado);
+	// objetoExpedienteMetadatos.setFechaAperturaExpediente(fechaAperturaExpediente);
+	// objetoExpedienteMetadatos.setInteresado(listInteresados);
+	// objetoExpedienteMetadatos.setVersionNTI(MetadatoVersionNTI);
+	
+	// objetoExpedienteENI.setMetadatos(objetoExpedienteMetadatos);
+	
+	// // INDICE
+	// ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
+	// ContenidoFirmaCertificado contenidoFirmaCertificado = new
+	// ContenidoFirmaCertificadoReferencia();
+	// listFirmas.add(new FirmaENI());
+	// listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_03);
+	// listFirmas.get(0).setContenidoFirmaDocument(contenidoFirmaCertificado);
+	
+	// List<ObjetoExpedienteIndiceContenidoElementoIndizado>
+	// listObjetoExpedienteIndiceContenidoElementoIndizados = new
+	// ArrayList<ObjetoExpedienteIndiceContenidoElementoIndizado>();
+	// ObjetoExpedienteIndiceContenidoElementoIndizado
+	// objetoExpedienteIndiceContenidoElementoIndizado = new
+	// ObjetoExpedienteIndiceContenidoElementoIndizado() {
+	// };
+	// objetoExpedienteIndiceContenidoElementoIndizado.setOrden(1);
+	
+	// listObjetoExpedienteIndiceContenidoElementoIndizados.add(objetoExpedienteIndiceContenidoElementoIndizado);
+	
+	// objetoExpedienteIndiceContenido
+	// .setIdentificadorExpedienteAsociado("EXP_INDICE_CONTENIDO" +
+	// MetadatoIdentificador);
+	// objetoExpedienteIndiceContenido.setFechaIndiceElectronico(Calendar.getInstance());
+	// objetoExpedienteIndiceContenido.setOrden(1);
+	// objetoExpedienteIndiceContenido.setElementosIndizados(listObjetoExpedienteIndiceContenidoElementoIndizados);
+	
+	// objetoExpedienteIndice.setFirmas(listFirmas);
+	// objetoExpedienteIndice.setIndiceContenido(objetoExpedienteIndiceContenido);
+	
+	// objetoExpedienteENI.setIndice(objetoExpedienteIndice);
+	
+	// // CONTENIDO
+	// ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
+	// InputStream fileStream = file.getInputStream();
+	// String extension = FilenameUtils.getExtension(file.getOriginalFilename());
+	// obDocContenido.setContenido(fileStream);
+	// obDocContenido.setNombreFormato(extension);
+	// objetoExpedienteENI.setVisualizacionIndice(obDocContenido);
+	
+	// objetoExpedienteENI.setVersion(objetoExpedienteVersion);
+	
+	// geENI.generateENIToFile(objetoExpedienteENI);
+	
+	// return new ResponseEntity<>(null, HttpStatus.OK);
+	// }
 }
