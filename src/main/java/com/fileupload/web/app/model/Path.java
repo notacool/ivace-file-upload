@@ -47,28 +47,40 @@ public class Path {
 	@Column(nullable = false, name = "descripcionConvocatoria")
 	private String descripcionConvocatoria;
 
-	@Column(nullable = false, name = "codigoExpediente")
+	@Column(nullable = false, name = "codigoX")
+	private String codX;
+
+	@Column(nullable = false, name = "nombreX")
+	private String nomX;
+
+	@Column(nullable = false, name = "tituloX")
+	private String tituloX;
+
+	@Column(nullable = false, name = "descripcionX")
+	private String descripcionX;
+
+	@Column(nullable = true, name = "codigoExpediente")
 	private String codExpediente;
 
-	@Column(nullable = false, name = "nombreExpediente")
+	@Column(nullable = true, name = "nombreExpediente")
 	private String nomExpediente;
 
-	@Column(nullable = false, name = "tituloExpediente")
+	@Column(nullable = true, name = "tituloExpediente")
 	private String tituloExpediente;
 
-	@Column(nullable = false, name = "descripcionExpediente")
+	@Column(nullable = true, name = "descripcionExpediente")
 	private String descripcionExpediente;
 
-	@Column(nullable = false, name = "codigoProceso")
+	@Column(nullable = true, name = "codigoProceso")
 	private String codProceso;
 
-	@Column(nullable = false, name = "nombreProceso")
+	@Column(nullable = true, name = "nombreProceso")
 	private String nomProceso;
 
-	@Column(nullable = false, name = "tituloProceso")
+	@Column(nullable = true, name = "tituloProceso")
 	private String tituloProceso;
 
-	@Column(nullable = false, name = "descripcionProceso")
+	@Column(nullable = true, name = "descripcionProceso")
 	private String descripcionProceso;
 
 	@Column(nullable = false, name = "codigoDocumentacion") 
@@ -92,35 +104,56 @@ public class Path {
     public Path() {
     }
     
-    public Path(String codArea, String nomArea, String codAnho, String nomAnho, String codConvocatoria,
-            String nomConvocatoria, String codExpediente, String nomExpediente, String codProceso, String nomProceso,
-            String codDocumentacion, String nomDocumentacion) {
+    public Path(String codArea, String nomArea, String codAnho, String nomAnho, String codConvocatoria, String nomConvocatoria, 
+            String codX, String nomX, String codExpediente, String nomExpediente, String codProceso, String nomProceso, String codDocumentacion, 
+            String nomDocumentacion) {
         this.codArea = codArea;
         this.nomArea = nomArea;
-        this.codAnho = codAnho;
-        this.nomAnho = nomAnho;
-        this.codConvocatoria = codConvocatoria;
-        this.nomConvocatoria = nomConvocatoria;
-        this.codExpediente = codExpediente;
-        this.nomExpediente = nomExpediente;
-        this.codProceso = codProceso;
-        this.nomProceso = nomProceso;
-        this.codDocumentacion = codDocumentacion;
-        this.nomDocumentacion = nomDocumentacion;
         this.descripcionArea = nomArea;
         this.tituloArea = codArea;
+
+        this.codAnho = codAnho;
+        this.nomAnho = nomAnho;
         this.descripcionAnho = nomArea + " " + nomAnho;
         this.tituloAnho = codArea + " " + codAnho;
+
+        this.codConvocatoria = codConvocatoria;
+        this.nomConvocatoria = nomConvocatoria;
         this.descripcionConvocatoria = nomArea + " " + nomAnho + " " + nomConvocatoria;
         this.tituloConvocatoria = codArea + " " + codAnho + " " + codConvocatoria;
-        this.descripcionExpediente = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomExpediente;
-        this.tituloExpediente = codArea + " " + codAnho + " " + codConvocatoria + " " + codExpediente;
-        this.descripcionProceso = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomExpediente + " " + nomProceso;
-        this.tituloProceso = codArea + " " + codAnho + " " + codConvocatoria + " " + codExpediente + " " + codProceso;
-        this.descripcionDocumentacion = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomExpediente + " " + nomProceso + " " + nomDocumentacion;
-        this.tituloProceso = codArea + " " + codAnho + " " + codConvocatoria + " " + codExpediente + " " + codProceso + " " + codDocumentacion;
-        this.codPath = "Sites/ivace/documentLibrary/" + codArea + "/" + codAnho + "/" + codConvocatoria + "/" + codExpediente + "/" + codProceso + "/" + codDocumentacion;
-        this.nomPath = "Sites/ivace/documentLibrary/" + nomArea + "/" + nomAnho + "/" + nomConvocatoria + "/" + nomExpediente + "/" + nomProceso + "/" + nomDocumentacion;
+
+        this.codX = codX;
+        this.nomX = nomX;
+        this.descripcionX = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX;
+        this.tituloX = codArea + " " + codAnho + " " + codConvocatoria + " " + codX;
+
+        if(nomX == "Normativa" && nomX == "CO Evaluación"){
+            this.codDocumentacion = codDocumentacion;
+            this.nomDocumentacion = nomDocumentacion;
+            this.descripcionDocumentacion = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX + " " + nomDocumentacion;
+            this.tituloDocumentacion = codArea + " " + codAnho + " " + codConvocatoria + " " + codX + " " + codDocumentacion;
+
+            this.codPath = "Sites/ivace/documentLibrary/" + codArea + "/" + codAnho + "/" + codConvocatoria + "/" + codX + "/" + codDocumentacion;
+            this.nomPath = "Sites/ivace/documentLibrary/" + nomArea + "/" + nomAnho + "/" + nomConvocatoria + "/" + nomX + "/" + nomDocumentacion;
+        }else{
+            this.codExpediente = codExpediente;
+            this.nomExpediente = nomExpediente;
+            this.descripcionExpediente = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX + " " + nomExpediente;
+            this.tituloExpediente = codArea + " " + codAnho + " " + codConvocatoria + " " + codX + " " + codExpediente;
+    
+            this.codProceso = codProceso;
+            this.nomProceso = nomProceso;
+            this.descripcionProceso = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX + " " + nomExpediente + " " + nomProceso;
+            this.tituloProceso = codArea + " " + codAnho + " " + codConvocatoria + " " + codX + " " + codExpediente + " " + codProceso;
+    
+            this.codDocumentacion = codDocumentacion;
+            this.nomDocumentacion = nomDocumentacion;
+            this.descripcionDocumentacion = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX + " " + nomExpediente + " " + nomProceso + " " + nomDocumentacion;
+            this.tituloDocumentacion = codArea + " " + codAnho + " " + codConvocatoria + " " + codX + " " + codExpediente + " " + codProceso + " " + codDocumentacion;
+    
+            this.codPath = "Sites/ivace/documentLibrary/" + codArea + "/" + codAnho + "/" + codConvocatoria + "/" + codX + "/" + codExpediente + "/" + codProceso + "/" + codDocumentacion;
+            this.nomPath = "Sites/ivace/documentLibrary/" + nomArea + "/" + nomAnho + "/" + nomConvocatoria + "/" + nomX + "/" + nomExpediente + "/" + nomProceso + "/" + nomDocumentacion;
+        }
     }
 
     public int getId() {
@@ -337,6 +370,38 @@ public class Path {
 
     public void setCodPath(String codPath) {
         this.codPath = codPath;
+    }
+
+    public String getCodX() {
+        return codX;
+    }
+
+    public void setCodX(String codX) {
+        this.codX = codX;
+    }
+
+    public String getNomX() {
+        return nomX;
+    }
+
+    public void setNomX(String nomX) {
+        this.nomX = nomX;
+    }
+
+    public String getTituloX() {
+        return tituloX;
+    }
+
+    public void setTituloX(String tituloX) {
+        this.tituloX = tituloX;
+    }
+
+    public String getDescripcionX() {
+        return descripcionX;
+    }
+
+    public void setDescripcionX(String descripcionX) {
+        this.descripcionX = descripcionX;
     }
     
 }

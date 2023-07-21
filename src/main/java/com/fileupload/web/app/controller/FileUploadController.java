@@ -112,18 +112,21 @@ public class FileUploadController {
 	@Value("${alfresco.excelPath}")
 	private String excelPath;
 
-	@PostMapping("/upload/{nomArea}/{nomAnio}/{nomConvocatoria}/{nomExpediente}/{nomProceso}/{nomDocumentacion}/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}") @ResponseBody
+	@PostMapping("/upload/{nomArea}/{nomAnio}/{nomConvocatoria}/{nomX}/{nomExpediente}/{nomProceso}/{nomDocumentacion}/{codArea}/{codAnio}/{codConvocatoria}/{codX}/{codExpediente}/{codProceso}/{codDocumentacion}")
+	@ResponseBody
 	public ResponseEntity<String> uploadToAlfresco(
 			@RequestPart("file") MultipartFile file,
 			@PathVariable("nomArea") String nomArea,
 			@PathVariable("nomAnio") String nomAnio,
 			@PathVariable("nomConvocatoria") String nomConvocatoria,
+			@PathVariable("nomX") String nomX,
 			@PathVariable("nomExpediente") String nomExpediente,
 			@PathVariable("nomProceso") String nomProceso,
 			@PathVariable("nomDocumentacion") String nomDocumentacion,
 			@PathVariable("codArea") String codArea,
 			@PathVariable("codAnio") String codAnio,
 			@PathVariable("codConvocatoria") String codConvocatoria,
+			@PathVariable("codX") String codX,
 			@PathVariable("codExpediente") String codExpediente,
 			@PathVariable("codProceso") String codProceso,
 			@PathVariable("codDocumentacion") String codDocumentacion,
@@ -157,8 +160,8 @@ public class FileUploadController {
 			Session session = factory.getRepositories(parameter).get(0).createSession();
 			Folder root = session.getRootFolder();
 
-			Path newPath = new Path(codArea, nomArea, codAnio, nomAnio, codConvocatoria, nomConvocatoria, codExpediente,
-					nomExpediente,
+			Path newPath = new Path(codArea, nomArea, codAnio, nomAnio, codConvocatoria, nomConvocatoria, codX, nomX,
+					codExpediente, nomExpediente,
 					codProceso, nomProceso, codDocumentacion, nomDocumentacion);
 
 			// Creamos las carpetas, pueden ser una o 50
@@ -236,7 +239,8 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/login") @ResponseBody
+	@PostMapping("/login")
+	@ResponseBody
 	public String login(@RequestHeader("clientID") String clientID, @RequestHeader("clientPass") String clientPass) {
 		TCredentials cred = credRepo.checkCredentials(clientID, clientPass);
 		logger.info("login attemp");
@@ -248,7 +252,8 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/delete-tags") @ResponseBody
+	@PostMapping("/delete-tags")
+	@ResponseBody
 	public void deleteAllTags(String user, String pass)
 			throws JsonMappingException, JsonProcessingException {
 
@@ -402,7 +407,8 @@ public class FileUploadController {
 		restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 	}
 
-	@GetMapping("/getByGustavo") @ResponseBody
+	@GetMapping("/getByGustavo")
+	@ResponseBody
 	public ResponseEntity<byte[]> getByGustavoId(
 			@RequestHeader(value = "user", required = true) String user,
 			@RequestHeader(value = "password", required = true) String pass,
@@ -486,7 +492,8 @@ public class FileUploadController {
 		return fileId;
 	}
 
-	@GetMapping("/getByUlises") @ResponseBody
+	@GetMapping("/getByUlises")
+	@ResponseBody
 	public ResponseEntity<byte[]> getByUlisesId(
 			@RequestHeader(value = "user", required = true) String user,
 			@RequestHeader(value = "password", required = true) String pass,
@@ -541,7 +548,7 @@ public class FileUploadController {
 		String[] fullNomPathSplitted = path.getNomPath().split("/");
 
 		properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
-		properties.put(PropertyIds.NAME, fullNomPathSplitted[index]);
+		properties.put(PropertyIds.NAME, fullNomPathSplitted[index].trim());
 		String description = null;
 		String title = null;
 
@@ -553,36 +560,69 @@ public class FileUploadController {
 			}
 		}
 		// create the folder
-		if (!folderExists) {
-			if (index == 3) {
-				logger.info("Estamos creando el Area");
-				description = path.getDescripcionArea();
-				title = path.getTituloArea();
-			}
-			if (index == 4) {
-				logger.info("Estamos creando el Año");
-				description = path.getDescripcionAnho();
-				title = path.getTituloAnho();
-			}
-			if (index == 5) {
-				logger.info("Estamos creando la convocatoria");
-				description = path.getDescripcionConvocatoria();
-				title = path.getTituloConvocatoria();
-			}
-			if (index == 6) {
-				logger.info("Estamos creando el expediente");
-				description = path.getDescripcionExpediente();
-				title = path.getTituloExpediente();
-			}
-			if (index == 7) {
-				logger.info("Estamos creando el proceso");
-				description = path.getDescripcionProceso();
-				title = path.getTituloProceso();
-			}
-			if (index == 8) {
-				logger.info("Estamos creando el documento");
-				description = path.getDescripcionDocumentacion();
-				title = path.getTituloDocumentacion();
+		if (!folderExists && fullNomPathSplitted[index].length() > 0) {
+			if(path.getCodX().equals("Normativa")  || path.getCodX().equals("CO Evaluación")){
+				if (index == 3) {
+					logger.info("Estamos creando el Area");
+					description = path.getDescripcionArea();
+					title = path.getTituloArea();
+				}
+				if (index == 4) {
+					logger.info("Estamos creando el Año");
+					description = path.getDescripcionAnho();
+					title = path.getTituloAnho();
+				}
+				if (index == 5) {
+					logger.info("Estamos creando la convocatoria");
+					description = path.getDescripcionConvocatoria();
+					title = path.getTituloConvocatoria();
+				}
+				if (index == 6) {
+					logger.info("Estamos creando X");
+					description = path.getDescripcionX();
+					title = path.getTituloX();
+				}
+				if (index == 7) {
+					logger.info("Estamos creando el documento");
+					description = path.getDescripcionDocumentacion();
+					title = path.getTituloDocumentacion();
+				}
+			}else{
+				if (index == 3) {
+					logger.info("Estamos creando el Area");
+					description = path.getDescripcionArea();
+					title = path.getTituloArea();
+				}
+				if (index == 4) {
+					logger.info("Estamos creando el Año");
+					description = path.getDescripcionAnho();
+					title = path.getTituloAnho();
+				}
+				if (index == 5) {
+					logger.info("Estamos creando la convocatoria");
+					description = path.getDescripcionConvocatoria();
+					title = path.getTituloConvocatoria();
+				}
+				if (index == 6) {
+					logger.info("Estamos creando X");
+					description = path.getDescripcionX();
+					title = path.getTituloX();
+				}
+				if (index == 7) {
+					logger.info("Estamos creando el expediente");
+					description = path.getDescripcionExpediente();
+					title = path.getTituloExpediente();
+				}
+				if (index == 8) {
+					logger.info("Estamos creando el proceso");
+					description = path.getDescripcionProceso();
+					title = path.getTituloProceso();
+				}
+				if (index == 9) {
+					logger.info("Estamos creando el documento");
+					description = path.getDescripcionDocumentacion();
+					title = path.getTituloDocumentacion();
+				}
 			}
 
 			properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
@@ -598,7 +638,8 @@ public class FileUploadController {
 		return parent;
 	}
 
-	@PostMapping("/generate-eni") @ResponseBody
+	@PostMapping("/generate-eni")
+	@ResponseBody
 	public ResponseEntity<String> GenerateDocumentENI(
 			@RequestPart("file") MultipartFile file,
 			String pathDestinoLocal,
@@ -677,7 +718,8 @@ public class FileUploadController {
 		}
 	}
 
-	@PostMapping("/generate-eni-and-upload-to-alfresco") @ResponseBody
+	@PostMapping("/generate-eni-and-upload-to-alfresco")
+	@ResponseBody
 	public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(
 			@RequestPart("file") MultipartFile file,
 			@RequestHeader("user") String user,
@@ -693,12 +735,14 @@ public class FileUploadController {
 			String codArea,
 			String codAnio,
 			String codConvocatoria,
+			String codX,
 			String codExpediente,
 			String codProceso,
 			String codDocumentacion,
 			String nomArea,
 			String nomAnio,
 			String nomConvocatoria,
+			String nomX,
 			String nomExpediente,
 			String nomProceso,
 			String nomDocumentacion) throws IOException, Exception {
@@ -764,8 +808,10 @@ public class FileUploadController {
 					f.getName().substring(0, f.getName().indexOf('-')) + ".xml",
 					f.getName().substring(0, f.getName().indexOf('-')) + ".xml", null,
 					IOUtils.toByteArray(input));
-			uploadToAlfresco(multipartFile, nomArea, nomAnio, nomConvocatoria, nomExpediente, nomProceso, nomDocumentacion, codArea, codAnio, 
-				codConvocatoria, codExpediente, codProceso, codDocumentacion, user, password, authorizationHeader, gustavoId, ulisesId);
+			uploadToAlfresco(multipartFile, nomArea, nomAnio, nomConvocatoria, nomX, nomExpediente, nomProceso,
+					nomDocumentacion, codArea, codAnio,
+					codConvocatoria, codX, codExpediente, codProceso, codDocumentacion, user, password,
+					authorizationHeader, gustavoId, ulisesId);
 
 			return new ResponseEntity<>(null, HttpStatus.OK);
 		} else {
@@ -782,122 +828,160 @@ public class FileUploadController {
 		return true;
 	}
 
-	@PostMapping("/createPathsFromExcel") @ResponseBody @Transactional(readOnly = false)
+	@PostMapping("/createPathsFromExcel")
+	@ResponseBody
+	@Transactional(readOnly = false)
 	public ResponseEntity<String> CreatePaths(
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader)
 			throws EncryptedDocumentException, IOException {
+
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
-		
-		try {
-			DataFormatter dataFormatter = new DataFormatter();
 
-			int iRow = 1;
+		DataFormatter dataFormatter = new DataFormatter();
 
-			File f = new File(excelPath);
-			InputStream inp = new FileInputStream(f);
-			Workbook wb = WorkbookFactory.create(inp);
-			Sheet sheet = wb.getSheetAt(0);
+		int iRow = 1;
 
-			Row row = sheet.getRow(iRow);
-			while (row != null) {
+		File f = new File(excelPath);
+		InputStream inp = new FileInputStream(f);
+		Workbook wb = WorkbookFactory.create(inp);
+		Sheet sheet = wb.getSheetAt(0);
 
-				if (pathRepository.findByCodigos(dataFormatter.formatCellValue(row.getCell(1)).trim(),
-						dataFormatter.formatCellValue(row.getCell(5)).trim(),
-						dataFormatter.formatCellValue(row.getCell(9)).trim(),
-						dataFormatter.formatCellValue(row.getCell(13)).trim(),
-						dataFormatter.formatCellValue(row.getCell(17)).trim(),
-						dataFormatter.formatCellValue(row.getCell(21)).trim()) == null) {
+		Row row = sheet.getRow(iRow);
+		while (row != null) {
+			if (pathRepository.findByCodigos(dataFormatter.formatCellValue(row.getCell(1)).trim(),
+					dataFormatter.formatCellValue(row.getCell(5)).trim(),
+					dataFormatter.formatCellValue(row.getCell(9)).trim(),
+					dataFormatter.formatCellValue(row.getCell(13)).trim(),
+					dataFormatter.formatCellValue(row.getCell(17)).trim(),
+					dataFormatter.formatCellValue(row.getCell(21)).trim()) == null) {
 
-					Path newPath = new Path();
-					int i = 0;
+				Path newPath = new Path();
+				int i = 0;
 
-					newPath.setNomArea(dataFormatter.formatCellValue(row.getCell(i)).trim());
-					i++;
-					newPath.setCodArea(dataFormatter.formatCellValue(row.getCell(i)).trim());
-					i++;
-					newPath.setTituloArea(dataFormatter.formatCellValue(row.getCell(i)));
-					i++;
-					newPath.setDescripcionArea(dataFormatter.formatCellValue(row.getCell(i)));
-					i++;
-					newPath.setNomAnho(dataFormatter.formatCellValue(row.getCell(i)).trim());
-					i++;
-					newPath.setCodAnho(dataFormatter.formatCellValue(row.getCell(i)).trim());
-					i++;
-					newPath.setTituloAnho(dataFormatter.formatCellValue(row.getCell(i)));
-					i++;
-					newPath.setDescripcionAnho(dataFormatter.formatCellValue(row.getCell(i)));
-					i++;
-					newPath.setNomConvocatoria(dataFormatter.formatCellValue(row.getCell(i)).trim());
-					i++;
-					newPath.setCodConvocatoria(dataFormatter.formatCellValue(row.getCell(i)).trim());
-					i++;
-					newPath.setTituloConvocatoria(dataFormatter.formatCellValue(row.getCell(i)));
-					i++;
-					newPath.setDescripcionConvocatoria(dataFormatter.formatCellValue(row.getCell(i)));
+				// AREA
+				newPath.setNomArea(dataFormatter.formatCellValue(row.getCell(i)).trim());
+				i++;
+				newPath.setCodArea(row.getCell(i).getRichStringCellValue().toString().trim());
+				i++;
+				newPath.setTituloArea(row.getCell(i).getRichStringCellValue().toString());
+				i++;
+				newPath.setDescripcionArea(row.getCell(i).getRichStringCellValue().toString());
+				// AÑO
+				i++;
+				newPath.setNomAnho(dataFormatter.formatCellValue(row.getCell(i)).trim());
+				i++; 
+				double aux = row.getCell(i).getNumericCellValue();
+				newPath.setCodAnho(Double.toString(aux));
+				i++;
+				newPath.setTituloAnho(row.getCell(i).getRichStringCellValue().toString());
+				i++;
+				newPath.setDescripcionAnho(row.getCell(i).getRichStringCellValue().toString());
+				// CONVOCATORIA
+				i++;
+				newPath.setNomConvocatoria(dataFormatter.formatCellValue(row.getCell(i)).trim());
+				i++;
+				newPath.setCodConvocatoria(row.getCell(i).getRichStringCellValue().toString().trim());
+				i++;
+				newPath.setTituloConvocatoria(row.getCell(i).getRichStringCellValue().toString());
+				i++;
+				newPath.setDescripcionConvocatoria(row.getCell(i).getRichStringCellValue().toString());
+				// X
+				i++;
+				newPath.setNomX(dataFormatter.formatCellValue(row.getCell(i)).trim());
+				i++;
+				newPath.setCodX(row.getCell(i).getRichStringCellValue().toString().trim().trim());
+				i++;
+				newPath.setTituloX(row.getCell(i).getRichStringCellValue().toString());
+				i++;
+				newPath.setDescripcionX(row.getCell(i).getRichStringCellValue().toString());
+
+				if (!newPath.getCodX().equals("Normativa") && !newPath.getCodX().equals("CO Evaluación")) {
+					// EXPEDIENTE
 					i++;
 					newPath.setNomExpediente(dataFormatter.formatCellValue(row.getCell(i)).trim());
 					i++;
-					newPath.setCodExpediente(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					newPath.setCodExpediente(row.getCell(i).getRichStringCellValue().toString().trim());
 					i++;
-					newPath.setTituloExpediente(dataFormatter.formatCellValue(row.getCell(i)));
+					newPath.setTituloExpediente(row.getCell(i).getRichStringCellValue().toString());
 					i++;
-					newPath.setDescripcionExpediente(dataFormatter.formatCellValue(row.getCell(i)));
+					newPath.setDescripcionExpediente(row.getCell(i).getRichStringCellValue().toString());
+					// PROCESO
 					i++;
 					newPath.setNomProceso(dataFormatter.formatCellValue(row.getCell(i)).trim());
 					i++;
-					newPath.setCodProceso(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					newPath.setCodProceso(row.getCell(i).getRichStringCellValue().toString().trim());
 					i++;
-					newPath.setTituloProceso(dataFormatter.formatCellValue(row.getCell(i)));
+					newPath.setTituloProceso(row.getCell(i).getRichStringCellValue().toString());
 					i++;
-					newPath.setDescripcionProceso(dataFormatter.formatCellValue(row.getCell(i)));
+					newPath.setDescripcionProceso(row.getCell(i).getRichStringCellValue().toString());
+					// DOCUMENTACION
 					i++;
 					newPath.setNomDocumentacion(dataFormatter.formatCellValue(row.getCell(i)).trim());
 					i++;
-					newPath.setCodDocumentacion(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					newPath.setCodDocumentacion(row.getCell(i).getRichStringCellValue().toString().trim());
 					i++;
-					newPath.setTituloDocumentacion(dataFormatter.formatCellValue(row.getCell(i)));
+					newPath.setTituloDocumentacion(row.getCell(i).getRichStringCellValue().toString());
 					i++;
-					newPath.setDescripcionDocumentacion(dataFormatter.formatCellValue(row.getCell(i)));
-
+					newPath.setDescripcionDocumentacion(row.getCell(i).getRichStringCellValue().toString());
+					// PATHS
 					newPath.setNomPath(
 							documentLibrary + newPath.getNomArea() + "/" + newPath.getNomAnho() + "/"
-									+ newPath.getNomConvocatoria() + "/" +
+									+ newPath.getNomConvocatoria() + "/" + newPath.getNomX() + "/" +
 									newPath.getNomExpediente() + "/" + newPath.getNomProceso() + "/"
 									+ newPath.getNomDocumentacion());
 
 					newPath.setCodPath(
 							documentLibrary + newPath.getCodArea() + "/" + newPath.getCodAnho() + "/"
-									+ newPath.getCodConvocatoria() + "/" +
+									+ newPath.getCodConvocatoria() + "/" + newPath.getCodX() + "/" +
 									newPath.getCodExpediente() + "/" + newPath.getCodProceso() + "/"
 									+ newPath.getCodDocumentacion());
+				} else {
+					i = i + 9;
+					// DOCUMENTACION
+					newPath.setNomDocumentacion(dataFormatter.formatCellValue(row.getCell(i)).trim());
+					i++;
+					newPath.setCodDocumentacion(row.getCell(i).getRichStringCellValue().toString().trim());
+					i++;
+					newPath.setTituloDocumentacion(row.getCell(i).getRichStringCellValue().toString());
+					i++;
+					newPath.setDescripcionDocumentacion(row.getCell(i).getRichStringCellValue().toString());
+					// PATHS
+					newPath.setNomPath(
+							documentLibrary + newPath.getNomArea() + "/" + newPath.getNomAnho() + "/"
+									+ newPath.getNomConvocatoria() + "/" + newPath.getNomX() + "/"
+									+ newPath.getNomDocumentacion());
 
-					pathRepository.create(newPath);
-
-					iRow++;
-					row = sheet.getRow(iRow);
+					newPath.setCodPath(
+							documentLibrary + newPath.getCodArea() + "/" + newPath.getCodAnho() + "/"
+									+ newPath.getCodConvocatoria() + "/" + newPath.getCodX() + "/"
+									+ newPath.getCodDocumentacion());
 				}
+
+				pathRepository.create(newPath);
+
+				iRow++;
+				row = sheet.getRow(iRow);
 			}
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 
 		return ResponseEntity.status(HttpStatus.OK).build();
 	}
 
-	@PostMapping("/GenerateDirectoryStructure") @ResponseBody
+	@PostMapping("/GenerateDirectoryStructure")
+	@ResponseBody
 	public String GenerateDirectoryStructure(
-		@RequestHeader(value = "Authorization", required = false) String authorizationHeader, String user,
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader, String user,
 			String pass) {
-				if (!JwtUtils.verifyToken(authorizationHeader)
+		if (!JwtUtils.verifyToken(authorizationHeader)
 				|| !JwtUtils.extractSubject(authorizationHeader).equals("NOTACOOLADMIN")) {
-					System.out.println("Invalid JWT");
+			System.out.println("Invalid JWT");
 			return "";
 		}
-		
+
 		List<Path> allPaths = pathRepository.findAll();
-		
+
 		if (allPaths.size() == 0) {
 			return "No existen paths";
 		} else {
@@ -947,7 +1031,7 @@ public class FileUploadController {
 	// String MetadatoIdentificador)
 	// throws IOException, JAXBException, ConverterException,
 	// ExpedientENIValidationException {
-	
+
 	// GregorianCalendar gc = GregorianCalendar.from(ZonedDateTime.now());
 	// GenerateExpedientENIImpl geENI = new GenerateExpedientENIImpl();
 	// ObjetoExpedienteENI objetoExpedienteENI = new ObjetoExpedienteENI();
@@ -965,7 +1049,7 @@ public class FileUploadController {
 	// listInteresados.add(MetadatoInteresados);
 	// List<String> listOrganos = new ArrayList<>();
 	// listOrganos.add(MetadatoOrganos);
-	
+
 	// // METADATOS
 	// switch (MetadatoEstadoElaboracion) {
 	// default:
@@ -981,7 +1065,7 @@ public class FileUploadController {
 	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_03;
 	// break;
 	// }
-	
+
 	// objetoExpedienteMetadatos.setIdentificadorExpediente(MetadatoIdentificador);
 	// objetoExpedienteMetadatos.setOrgano(listOrganos);
 	// objetoExpedienteMetadatos.setClasificacion(MetadatoClasificacion);
@@ -989,9 +1073,9 @@ public class FileUploadController {
 	// objetoExpedienteMetadatos.setFechaAperturaExpediente(fechaAperturaExpediente);
 	// objetoExpedienteMetadatos.setInteresado(listInteresados);
 	// objetoExpedienteMetadatos.setVersionNTI(MetadatoVersionNTI);
-	
+
 	// objetoExpedienteENI.setMetadatos(objetoExpedienteMetadatos);
-	
+
 	// // INDICE
 	// ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
 	// ContenidoFirmaCertificado contenidoFirmaCertificado = new
@@ -999,7 +1083,7 @@ public class FileUploadController {
 	// listFirmas.add(new FirmaENI());
 	// listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_03);
 	// listFirmas.get(0).setContenidoFirmaDocument(contenidoFirmaCertificado);
-	
+
 	// List<ObjetoExpedienteIndiceContenidoElementoIndizado>
 	// listObjetoExpedienteIndiceContenidoElementoIndizados = new
 	// ArrayList<ObjetoExpedienteIndiceContenidoElementoIndizado>();
@@ -1008,21 +1092,21 @@ public class FileUploadController {
 	// ObjetoExpedienteIndiceContenidoElementoIndizado() {
 	// };
 	// objetoExpedienteIndiceContenidoElementoIndizado.setOrden(1);
-	
+
 	// listObjetoExpedienteIndiceContenidoElementoIndizados.add(objetoExpedienteIndiceContenidoElementoIndizado);
-	
+
 	// objetoExpedienteIndiceContenido
 	// .setIdentificadorExpedienteAsociado("EXP_INDICE_CONTENIDO" +
 	// MetadatoIdentificador);
 	// objetoExpedienteIndiceContenido.setFechaIndiceElectronico(Calendar.getInstance());
 	// objetoExpedienteIndiceContenido.setOrden(1);
 	// objetoExpedienteIndiceContenido.setElementosIndizados(listObjetoExpedienteIndiceContenidoElementoIndizados);
-	
+
 	// objetoExpedienteIndice.setFirmas(listFirmas);
 	// objetoExpedienteIndice.setIndiceContenido(objetoExpedienteIndiceContenido);
-	
+
 	// objetoExpedienteENI.setIndice(objetoExpedienteIndice);
-	
+
 	// // CONTENIDO
 	// ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
 	// InputStream fileStream = file.getInputStream();
@@ -1030,11 +1114,11 @@ public class FileUploadController {
 	// obDocContenido.setContenido(fileStream);
 	// obDocContenido.setNombreFormato(extension);
 	// objetoExpedienteENI.setVisualizacionIndice(obDocContenido);
-	
+
 	// objetoExpedienteENI.setVersion(objetoExpedienteVersion);
-	
+
 	// geENI.generateENIToFile(objetoExpedienteENI);
-	
+
 	// return new ResponseEntity<>(null, HttpStatus.OK);
 	// }
 }
