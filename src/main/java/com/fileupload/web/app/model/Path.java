@@ -127,7 +127,7 @@ public class Path {
         this.descripcionX = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX;
         this.tituloX = codArea + " " + codAnho + " " + codConvocatoria + " " + codX;
 
-        if(nomX == "Normativa" && nomX == "CO Evaluación"){
+        if(nomX.equals("Normativa") || nomX.equals("CO Evaluación")){
             this.codDocumentacion = codDocumentacion;
             this.nomDocumentacion = nomDocumentacion;
             this.descripcionDocumentacion = nomArea + " " + nomAnho + " " + nomConvocatoria + " " + nomX + " " + nomDocumentacion;

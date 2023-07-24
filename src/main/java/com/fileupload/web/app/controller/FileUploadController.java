@@ -112,36 +112,51 @@ public class FileUploadController {
 	@Value("${alfresco.excelPath}")
 	private String excelPath;
 
-	@PostMapping("/upload/{nomArea}/{nomAnio}/{nomConvocatoria}/{nomX}/{nomExpediente}/{nomProceso}/{nomDocumentacion}/{codArea}/{codAnio}/{codConvocatoria}/{codX}/{codExpediente}/{codProceso}/{codDocumentacion}")
+	@PostMapping("/upload")
 	@ResponseBody
 	public ResponseEntity<String> uploadToAlfresco(
-			@RequestPart("file") MultipartFile file,
-			@PathVariable("nomArea") String nomArea,
-			@PathVariable("nomAnio") String nomAnio,
-			@PathVariable("nomConvocatoria") String nomConvocatoria,
-			@PathVariable("nomX") String nomX,
-			@PathVariable("nomExpediente") String nomExpediente,
-			@PathVariable("nomProceso") String nomProceso,
-			@PathVariable("nomDocumentacion") String nomDocumentacion,
-			@PathVariable("codArea") String codArea,
-			@PathVariable("codAnio") String codAnio,
-			@PathVariable("codConvocatoria") String codConvocatoria,
-			@PathVariable("codX") String codX,
-			@PathVariable("codExpediente") String codExpediente,
-			@PathVariable("codProceso") String codProceso,
-			@PathVariable("codDocumentacion") String codDocumentacion,
+			@RequestPart(value = "file", required = true) MultipartFile file,
+			@RequestHeader(value = "nomArea") String nomArea,
+			@RequestHeader(value = "nomAnio") String nomAnio,
+			@RequestHeader(value = "nomConvocatoria") String nomConvocatoria,
+			@RequestHeader(value = "nomX") String nomX,
+			@RequestHeader(value = "nomExpediente", required = false) String nomExpediente,
+			@RequestHeader(value = "nomProceso", required = false) String nomProceso,
+			@RequestHeader(value = "nomDocumentacion") String nomDocumentacion,
+			@RequestHeader(value = "codArea") String codArea,
+			@RequestHeader(value = "codAnio") String codAnio,
+			@RequestHeader(value = "codConvocatoria") String codConvocatoria,
+			@RequestHeader(value = "codX") String codX,
+			@RequestHeader(value = "codExpediente", required = false) String codExpediente,
+			@RequestHeader(value = "codProceso", required = false) String codProceso,
+			@RequestHeader(value = "codDocumentacion") String codDocumentacion,
 			@RequestHeader(value = "user", required = true) String user,
 			@RequestHeader(value = "password", required = true) String password,
 			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
-			@RequestHeader(value = "gustavoId", required = true) String gustavoId,
-			@RequestHeader(value = "ulisesId", required = true) String ulisesId) {
+			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
+			@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
 		}
 
+		if(!codX.equals("Expediente") && (codExpediente != null || codProceso != null)){
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+
 		try {
+
+			String nomPath = documentLibrary + codArea + "/" + codAnio + "/" + codConvocatoria + "/" + codX;
+			if(codX.equals("Normativa") || codX.equals("CO Evaluación")){
+				nomPath = nomPath + "/" + codDocumentacion;
+			} else {
+				nomPath = nomPath + "/" + codExpediente + "/" + codProceso + "/" + codDocumentacion;
+			}
+
+			if(!validator.isValidRequest(nomPath)) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			}
 
 			byte[] fileContent = file.getBytes();
 			Boolean fileExists = false;
@@ -160,9 +175,8 @@ public class FileUploadController {
 			Session session = factory.getRepositories(parameter).get(0).createSession();
 			Folder root = session.getRootFolder();
 
-			Path newPath = new Path(codArea, nomArea, codAnio, nomAnio, codConvocatoria, nomConvocatoria, codX, nomX,
-					codExpediente, nomExpediente,
-					codProceso, nomProceso, codDocumentacion, nomDocumentacion);
+			Path newPath = new Path(codArea, nomArea, codAnio, nomAnio, codConvocatoria, nomConvocatoria, codX, nomX, codExpediente, 
+					nomExpediente, codProceso, nomProceso, codDocumentacion, nomDocumentacion);
 
 			// Creamos las carpetas, pueden ser una o 50
 			Folder parent = root;
@@ -809,8 +823,7 @@ public class FileUploadController {
 					f.getName().substring(0, f.getName().indexOf('-')) + ".xml", null,
 					IOUtils.toByteArray(input));
 			uploadToAlfresco(multipartFile, nomArea, nomAnio, nomConvocatoria, nomX, nomExpediente, nomProceso,
-					nomDocumentacion, codArea, codAnio,
-					codConvocatoria, codX, codExpediente, codProceso, codDocumentacion, user, password,
+					nomDocumentacion, codArea, codAnio, codConvocatoria, codX, codExpediente, codProceso, codDocumentacion, user, password,
 					authorizationHeader, gustavoId, ulisesId);
 
 			return new ResponseEntity<>(null, HttpStatus.OK);
@@ -850,12 +863,14 @@ public class FileUploadController {
 
 		Row row = sheet.getRow(iRow);
 		while (row != null) {
-			if (pathRepository.findByCodigos(dataFormatter.formatCellValue(row.getCell(1)).trim(),
+			if (pathRepository.findByCodigos(
+					dataFormatter.formatCellValue(row.getCell(1)).trim(),
 					dataFormatter.formatCellValue(row.getCell(5)).trim(),
 					dataFormatter.formatCellValue(row.getCell(9)).trim(),
 					dataFormatter.formatCellValue(row.getCell(13)).trim(),
 					dataFormatter.formatCellValue(row.getCell(17)).trim(),
-					dataFormatter.formatCellValue(row.getCell(21)).trim()) == null) {
+					dataFormatter.formatCellValue(row.getCell(21)).trim(),
+					dataFormatter.formatCellValue(row.getCell(25)).trim()) == null) {
 
 				Path newPath = new Path();
 				int i = 0;
