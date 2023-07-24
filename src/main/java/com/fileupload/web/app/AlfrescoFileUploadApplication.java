@@ -5,15 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
-
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class }	)
+@SpringBootApplication(exclude = { SecurityAutoConfiguration.class })
 @EnableJpaRepositories("com.fileupload.web.app.repository")
-@EnableSwagger2
+// @EnableSwagger2
 public class AlfrescoFileUploadApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(AlfrescoFileUploadApplication.class, args);
 	}
-
 }

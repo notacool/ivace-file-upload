@@ -10,7 +10,7 @@ WORKDIR /app
 # Dar permisos de ejecución al script mvnw
 RUN chmod +x mvnw
 
-# Ejecutar el build del proyecto
+# Ejecutar el build del proyecto    
 RUN ./mvnw clean package
 
 # Establecer el comando para arrancar la aplicación

@@ -7,8 +7,8 @@ import javax.persistence.*;
 public class TCredentials {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "id", unique = true, nullable = false, scale = 0)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@Column(name = "id")
 	private int id;
 
 	@Column(nullable = false, name = "clientID")
@@ -45,7 +45,5 @@ public class TCredentials {
 	public void setClientPass(String clientPass) {
 		this.clientPass = clientPass;
 	}
-	
-	
 
 }
