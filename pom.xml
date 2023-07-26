@@ -78,21 +78,6 @@
 			<version>3.0.0</version> 
 		</dependency>
 		<dependency>
-			<groupId>es.aapp.gob</groupId>
-			<artifactId>LibreriaENI</artifactId>
-			<version>1-4-3</version>
-		</dependency>
-		<dependency>
-			<groupId>es.gob.afirma</groupId>
-			<artifactId>miniapplet-full</artifactId>
-			<version>1_5</version>
-		</dependency>
-		<dependency>
-			<groupId>es.juntadeandalucia.nti</groupId>
-			<artifactId>enidocWS</artifactId>
-			<version>3.0.3</version>
-		</dependency>
-		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-test</artifactId>
 			<version>3.1.1.RELEASE</version>

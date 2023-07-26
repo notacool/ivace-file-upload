@@ -15,7 +15,7 @@ public class AlfrescoFileUploadApplication {
 	static Logger logger = LoggerFactory.getLogger(AlfrescoFileUploadApplication.class);
 
 	public static void main(String[] args) {
-		logger.info("Estas usando la version 1.4");
+		logger.info("Estas usando la version 1.4.0");
 		SpringApplication.run(AlfrescoFileUploadApplication.class, args);
 	}
 	

@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,9 +26,6 @@ import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.commons.enums.VersioningState;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -46,11 +42,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -72,17 +66,6 @@ import com.fileupload.web.app.repository.PathRepository;
 import com.fileupload.web.app.security.JwtUtils;
 import com.fileupload.web.app.validator.RequestValidator;
 
-import es.gob.aapp.libreriaENI.exception.document.DocumentENIValidationException;
-import es.gob.aapp.libreriaENI.model.documento.ObjetoDocumentoENI;
-import es.gob.aapp.libreriaENI.model.documento.contenido.ObjetoDocumentoContenido;
-import es.gob.aapp.libreriaENI.model.documento.firma.FirmaENI;
-import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatos;
-import es.gob.aapp.libreriaENI.model.documento.metadatos.ObjetoDocumentoMetadatosEstadoElaboracion;
-import es.gob.aapp.libreriaENI.service.impl.GenerateDocumentENIImpl;
-import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoEstadoElaboracion;
-import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoTipoDocumental;
-import es.gob.aapp.libreriaENI.util.EnumeracionDocumentoTipoFirma;
-import es.gob.aapp.libreriaENI.valide.ValideDocumentENI;
 import io.swagger.annotations.Api;
 
 @Api(description = "Servicio para comunicar aplicaciones externas con el Gestor Documental del IVACE.", tags = "API de comunicacion con Alfresco")
@@ -102,6 +85,12 @@ public class FileUploadController {
 
 	@Autowired
 	RequestValidator validator;
+		
+	@Value("${alfresco.user}")
+	private String user;
+		
+	@Value("${alfresco.pass}")
+	private String password;
 
 	@Value("${alfresco.url}")
 	private String url;
@@ -130,15 +119,13 @@ public class FileUploadController {
 			@RequestHeader(value = "codExpediente", required = false) String codExpediente,
 			@RequestHeader(value = "codProceso", required = false) String codProceso,
 			@RequestHeader(value = "codDocumentacion") String codDocumentacion,
-			@RequestHeader(value = "user", required = true) String user,
-			@RequestHeader(value = "password", required = true) String password,
 			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
 			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
 			@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 
 		if(!codX.equals("Expediente") && (codExpediente != null || codProceso != null)){
@@ -147,11 +134,11 @@ public class FileUploadController {
 
 		try {
 
-			String nomPath = documentLibrary + codArea + "/" + codAnio + "/" + codConvocatoria + "/" + codX;
-			if(codX.equals("Normativa") || codX.equals("CO Evaluación")){
-				nomPath = nomPath + "/" + codDocumentacion;
+			String nomPath = documentLibrary + nomArea + "/" + nomAnio + "/" + nomConvocatoria + "/" + nomX;
+			if(nomX.equals("Normativa") || nomX.equals("CO Evaluación")){
+				nomPath = nomPath + "/" + nomDocumentacion;
 			} else {
-				nomPath = nomPath + "/" + codExpediente + "/" + codProceso + "/" + codDocumentacion;
+				nomPath = nomPath + "/" + nomExpediente + "/" + nomProceso + "/" + nomDocumentacion;
 			}
 
 			if(!validator.isValidRequest(nomPath)) {
@@ -183,7 +170,7 @@ public class FileUploadController {
 
 			String[] aux = newPath.getNomPath().split("/");
 			for (int index = 0; index < aux.length; index++) {
-				parent = createFolder(parent, newPath, index, user, password);
+				parent = createFolder(parent, newPath, index);
 			}
 
 			// Creamos el archivo si no existe
@@ -268,13 +255,13 @@ public class FileUploadController {
 
 	@PostMapping("/delete-tags")
 	@ResponseBody
-	public void deleteAllTags(String user, String pass)
+	public void deleteAllTags()
 			throws JsonMappingException, JsonProcessingException {
 
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 		parameter.put(SessionParameter.USER, user);
-		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.PASSWORD, password);
 		parameter.put(SessionParameter.ATOMPUB_URL, url);
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 		Session session = factory.getRepositories(parameter).get(0).createSession();
@@ -377,7 +364,7 @@ public class FileUploadController {
 
 			RestTemplate restTemplate = new RestTemplate();
 			HttpHeaders headers = new HttpHeaders();
-			headers.setBasicAuth(user, pass);
+			headers.setBasicAuth(user, password);
 			headers.setContentType(MediaType.APPLICATION_JSON);
 
 			HttpEntity<String> requestEntity = new HttpEntity<>(headers);
@@ -398,11 +385,11 @@ public class FileUploadController {
 		}
 	}
 
-	public void generateFolderTag(String folderPath, String tag, String user, String pass) {
+	public void generateFolderTag(String folderPath, String tag) {
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 		parameter.put(SessionParameter.USER, user);
-		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.PASSWORD, password);
 		parameter.put(SessionParameter.ATOMPUB_URL, url);
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 		Session session = factory.getRepositories(parameter).get(0).createSession();
@@ -412,7 +399,7 @@ public class FileUploadController {
 				+ "/tags";
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
-		headers.setBasicAuth(user, pass);
+		headers.setBasicAuth(user, password);
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		String jsonTag = "{\"tag\":\""
 				+ tag
@@ -424,14 +411,12 @@ public class FileUploadController {
 	@GetMapping("/getByGustavo")
 	@ResponseBody
 	public ResponseEntity<byte[]> getByGustavoId(
-			@RequestHeader(value = "user", required = true) String user,
-			@RequestHeader(value = "password", required = true) String pass,
 			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
 			@RequestHeader(value = "gustavoID", required = true) int gustavoID) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 
 		SessionFactory factory = SessionFactoryImpl.newInstance();
@@ -439,7 +424,7 @@ public class FileUploadController {
 
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
-		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.PASSWORD, password);
 		parameter.put(SessionParameter.ATOMPUB_URL, url);
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
@@ -456,7 +441,7 @@ public class FileUploadController {
 							+ "/content?attachment=true";
 					RestTemplate restTemplate = new RestTemplate();
 					HttpHeaders headers = new HttpHeaders();
-					headers.setBasicAuth(user, pass);
+					headers.setBasicAuth(user, password);
 					headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 					HttpEntity<String> entity = new HttpEntity<>(headers);
 					ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
@@ -509,20 +494,18 @@ public class FileUploadController {
 	@GetMapping("/getByUlises")
 	@ResponseBody
 	public ResponseEntity<byte[]> getByUlisesId(
-			@RequestHeader(value = "user", required = true) String user,
-			@RequestHeader(value = "password", required = true) String pass,
 			@RequestHeader(value = "Authorization", required = true) String authorizationHeader,
 			@RequestHeader(value = "ulisesID", required = true) int ulisesID) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
 
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
-		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.PASSWORD, password);
 		parameter.put(SessionParameter.ATOMPUB_URL, url);
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
@@ -539,7 +522,7 @@ public class FileUploadController {
 							+ "/content?attachment=true";
 					RestTemplate restTemplate = new RestTemplate();
 					HttpHeaders headers = new HttpHeaders();
-					headers.setBasicAuth(user, pass);
+					headers.setBasicAuth(user, password);
 					headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 					HttpEntity<String> entity = new HttpEntity<>(headers);
 					ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class);
@@ -555,7 +538,7 @@ public class FileUploadController {
 
 	}
 
-	public Folder createFolder(Folder root, Path path, Integer index, String user, String pass) {
+	public Folder createFolder(Folder root, Path path, Integer index) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
 
@@ -652,195 +635,6 @@ public class FileUploadController {
 		return parent;
 	}
 
-	@PostMapping("/generate-eni")
-	@ResponseBody
-	public ResponseEntity<String> GenerateDocumentENI(
-			@RequestPart("file") MultipartFile file,
-			String pathDestinoLocal,
-			String MetadatoEstadoElaboracion,
-			String MetadatoOrganos,
-			String MetadatoIdDocumento,
-			String MetadatoVersionNTI) throws IOException, Exception {
-
-		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
-		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
-		ObjetoDocumentoMetadatos obMetadatos = new ObjetoDocumentoMetadatos();
-		ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
-		GregorianCalendar gCalendar = new GregorianCalendar();
-		ArrayList<String> organos = new ArrayList<String>();
-
-		if (!validator.isValidDocumentId(MetadatoIdDocumento)) {
-			return new ResponseEntity<>(
-					"Identificador introducido no válido. Debe ser de la forma ES_LLNNNNNNN_NNNN_XXXXXXX con un máximo de 52 caracteres (L = Letra, N = Numeros).",
-					HttpStatus.BAD_REQUEST);
-		}
-
-		organos.add(MetadatoOrganos);
-
-		switch (MetadatoEstadoElaboracion) {
-			default:
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-				break;
-			case "ORIGINAL":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-				break;
-			case "COPIA ELECTRONICA AUTENTICA CON CAMBIO DE FORMATO":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_02);
-				break;
-			case "COPIA ELECTRONICA AUTENTICA DE DOCUMENTO PAPEL":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_03);
-				break;
-			case "COPIA ELECTRONICA PARCIAL AUTENTICA":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_04);
-				break;
-			case "OTROS":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
-				break;
-		}
-
-		obMetadatos.setEstadoElaboracion(estEl);
-		obMetadatos.setVersionNTI(MetadatoVersionNTI);
-		obMetadatos.setIdentificadorDocumento(MetadatoIdDocumento);
-		obMetadatos.setOrgano(organos);
-		obMetadatos.setFechaCaptura(gCalendar);
-		obMetadatos.setTipoDocumental(EnumeracionDocumentoTipoDocumental.TD_99);
-
-		eni.setMetadatos(obMetadatos);
-
-		ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
-		listFirmas.add(new FirmaENI());
-		listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_01);
-		listFirmas.get(0).setCsv("sample csv code");
-		listFirmas.get(0).setRegulacionCsv("sample regulation csv code");
-
-		eni.setFirmas(listFirmas);
-
-		ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-		InputStream fileStream = file.getInputStream();
-		String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-		obDocContenido.setContenido(fileStream);
-		obDocContenido.setNombreFormato(extension);
-		eni.setContenidoDocumento(obDocContenido);
-
-		if (ValidateENI(eni)) {
-			InputStream fis = gdENI.generateENI(eni);
-			File f = new File(pathDestinoLocal + "\\" + MetadatoIdDocumento + ".xml");
-			FileUtils.copyInputStreamToFile(fis, f);
-			return new ResponseEntity<>(null, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-		}
-	}
-
-	@PostMapping("/generate-eni-and-upload-to-alfresco")
-	@ResponseBody
-	public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(
-			@RequestPart("file") MultipartFile file,
-			@RequestHeader("user") String user,
-			@RequestHeader("password") String password,
-			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
-			@RequestHeader(value = "ulisesId", required = false) String ulisesId,
-			String MetadatoEstadoElaboracion,
-			String MetadatoOrganos,
-			String MetadatoIdDocumento,
-			String MetadatoVersionNTI,
-			String pathDestino,
-			String codArea,
-			String codAnio,
-			String codConvocatoria,
-			String codX,
-			String codExpediente,
-			String codProceso,
-			String codDocumentacion,
-			String nomArea,
-			String nomAnio,
-			String nomConvocatoria,
-			String nomX,
-			String nomExpediente,
-			String nomProceso,
-			String nomDocumentacion) throws IOException, Exception {
-
-		GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
-		ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
-		ObjetoDocumentoMetadatos obMetadatos = new ObjetoDocumentoMetadatos();
-		ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
-		GregorianCalendar gCalendar = new GregorianCalendar();
-		ArrayList<String> organos = new ArrayList<String>();
-
-		organos.add(MetadatoOrganos);
-
-		switch (MetadatoEstadoElaboracion) {
-			default:
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-				break;
-			case "ORIGINAL":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-				break;
-			case "COPIA ELECTRONICA AUTENTICA CON CAMBIO DE FORMATO":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_02);
-				break;
-			case "COPIA ELECTRONICA AUTENTICA DE DOCUMENTO PAPEL":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_03);
-				break;
-			case "COPIA ELECTRONICA PARCIAL AUTENTICA":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_04);
-				break;
-			case "OTROS":
-				estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
-				break;
-		}
-
-		obMetadatos.setEstadoElaboracion(estEl);
-		obMetadatos.setVersionNTI(MetadatoVersionNTI);
-		obMetadatos.setIdentificadorDocumento(MetadatoIdDocumento);
-		obMetadatos.setOrgano(organos);
-		obMetadatos.setFechaCaptura(gCalendar);
-		obMetadatos.setTipoDocumental(EnumeracionDocumentoTipoDocumental.TD_99);
-
-		eni.setMetadatos(obMetadatos);
-
-		ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
-		listFirmas.add(new FirmaENI());
-		listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_01);
-		listFirmas.get(0).setCsv("sample csv code");
-		listFirmas.get(0).setRegulacionCsv("sample regulation csv code");
-
-		eni.setFirmas(listFirmas);
-
-		ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-		InputStream fileStream = file.getInputStream();
-		String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-		obDocContenido.setContenido(fileStream);
-		obDocContenido.setNombreFormato(extension);
-		eni.setContenidoDocumento(obDocContenido);
-
-		if (ValidateENI(eni)) {
-			File f = gdENI.generateENIToFile(eni);
-			FileInputStream input = new FileInputStream(f);
-			MultipartFile multipartFile = new MockMultipartFile(
-					f.getName().substring(0, f.getName().indexOf('-')) + ".xml",
-					f.getName().substring(0, f.getName().indexOf('-')) + ".xml", null,
-					IOUtils.toByteArray(input));
-			uploadToAlfresco(multipartFile, nomArea, nomAnio, nomConvocatoria, nomX, nomExpediente, nomProceso,
-					nomDocumentacion, codArea, codAnio, codConvocatoria, codX, codExpediente, codProceso, codDocumentacion, user, password,
-					authorizationHeader, gustavoId, ulisesId);
-
-			return new ResponseEntity<>(null, HttpStatus.OK);
-		} else {
-			return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-		}
-	}
-
-	public static boolean ValidateENI(ObjetoDocumentoENI file) {
-		try {
-			ValideDocumentENI.validaDocumentENI(file);
-		} catch (DocumentENIValidationException e) {
-			return false;
-		}
-		return true;
-	}
-
 	@PostMapping("/createPathsFromExcel")
 	@ResponseBody
 	@Transactional(readOnly = false)
@@ -849,7 +643,7 @@ public class FileUploadController {
 			throws EncryptedDocumentException, IOException {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 
 		DataFormatter dataFormatter = new DataFormatter();
@@ -987,8 +781,7 @@ public class FileUploadController {
 	@PostMapping("/GenerateDirectoryStructure")
 	@ResponseBody
 	public String GenerateDirectoryStructure(
-			@RequestHeader(value = "Authorization", required = false) String authorizationHeader, String user,
-			String pass) {
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
 		if (!JwtUtils.verifyToken(authorizationHeader)
 				|| !JwtUtils.extractSubject(authorizationHeader).equals("NOTACOOLADMIN")) {
 			System.out.println("Invalid JWT");
@@ -1006,7 +799,7 @@ public class FileUploadController {
 
 			// Credenciales del usuario y url de conexión
 			parameter.put(SessionParameter.USER, user);
-			parameter.put(SessionParameter.PASSWORD, pass);
+			parameter.put(SessionParameter.PASSWORD, password);
 			parameter.put(SessionParameter.ATOMPUB_URL, url);
 			parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
@@ -1022,7 +815,7 @@ public class FileUploadController {
 
 				String[] aux = allPaths.get(i).getNomPath().split("/");
 				for (int index = 0; index < aux.length; index++) {
-					parent = createFolder(parent, allPaths.get(i), index, user, pass);
+					parent = createFolder(parent, allPaths.get(i), index);
 				}
 			}
 		}
@@ -1032,108 +825,4 @@ public class FileUploadController {
 		return "";
 	}
 
-	// @RequestMapping(path = "/generate-expediente", method = RequestMethod.POST,
-	// consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	// public ResponseEntity<String> GenerateExpedienteENI(
-	// @RequestPart("file") MultipartFile file,
-	// @RequestHeader("clientID") String clientID,
-	// @RequestHeader("clientPass") String clientPass,
-	// String MetadatoEstadoElaboracion,
-	// String MetadatoOrganos,
-	// String MetadatoClasificacion,
-	// String MetadatoVersionNTI,
-	// String MetadatoInteresados,
-	// String MetadatoIdentificador)
-	// throws IOException, JAXBException, ConverterException,
-	// ExpedientENIValidationException {
-
-	// GregorianCalendar gc = GregorianCalendar.from(ZonedDateTime.now());
-	// GenerateExpedientENIImpl geENI = new GenerateExpedientENIImpl();
-	// ObjetoExpedienteENI objetoExpedienteENI = new ObjetoExpedienteENI();
-	// ObjetoExpedienteIndice objetoExpedienteIndice = new ObjetoExpedienteIndice();
-	// ObjetoExpedienteMetadatos objetoExpedienteMetadatos = new
-	// ObjetoExpedienteMetadatos();
-	// ObjetoExpedienteMetadatosEnumeracionEstados estado =
-	// ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
-	// ObjetoExpedienteVersion objetoExpedienteVersion = new
-	// ObjetoExpedienteVersion(1, gc);
-	// Calendar fechaAperturaExpediente = Calendar.getInstance();
-	// ObjetoExpedienteIndiceContenido objetoExpedienteIndiceContenido = new
-	// ObjetoExpedienteIndiceContenido();
-	// List<String> listInteresados = new ArrayList<>();
-	// listInteresados.add(MetadatoInteresados);
-	// List<String> listOrganos = new ArrayList<>();
-	// listOrganos.add(MetadatoOrganos);
-
-	// // METADATOS
-	// switch (MetadatoEstadoElaboracion) {
-	// default:
-	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
-	// break;
-	// case "ABIERTO":
-	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_01;
-	// break;
-	// case "CERRADO":
-	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_02;
-	// break;
-	// case "INDICE PARA REMISION CERRADO":
-	// estado = ObjetoExpedienteMetadatosEnumeracionEstados.E_03;
-	// break;
-	// }
-
-	// objetoExpedienteMetadatos.setIdentificadorExpediente(MetadatoIdentificador);
-	// objetoExpedienteMetadatos.setOrgano(listOrganos);
-	// objetoExpedienteMetadatos.setClasificacion(MetadatoClasificacion);
-	// objetoExpedienteMetadatos.setEstado(estado);
-	// objetoExpedienteMetadatos.setFechaAperturaExpediente(fechaAperturaExpediente);
-	// objetoExpedienteMetadatos.setInteresado(listInteresados);
-	// objetoExpedienteMetadatos.setVersionNTI(MetadatoVersionNTI);
-
-	// objetoExpedienteENI.setMetadatos(objetoExpedienteMetadatos);
-
-	// // INDICE
-	// ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
-	// ContenidoFirmaCertificado contenidoFirmaCertificado = new
-	// ContenidoFirmaCertificadoReferencia();
-	// listFirmas.add(new FirmaENI());
-	// listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_03);
-	// listFirmas.get(0).setContenidoFirmaDocument(contenidoFirmaCertificado);
-
-	// List<ObjetoExpedienteIndiceContenidoElementoIndizado>
-	// listObjetoExpedienteIndiceContenidoElementoIndizados = new
-	// ArrayList<ObjetoExpedienteIndiceContenidoElementoIndizado>();
-	// ObjetoExpedienteIndiceContenidoElementoIndizado
-	// objetoExpedienteIndiceContenidoElementoIndizado = new
-	// ObjetoExpedienteIndiceContenidoElementoIndizado() {
-	// };
-	// objetoExpedienteIndiceContenidoElementoIndizado.setOrden(1);
-
-	// listObjetoExpedienteIndiceContenidoElementoIndizados.add(objetoExpedienteIndiceContenidoElementoIndizado);
-
-	// objetoExpedienteIndiceContenido
-	// .setIdentificadorExpedienteAsociado("EXP_INDICE_CONTENIDO" +
-	// MetadatoIdentificador);
-	// objetoExpedienteIndiceContenido.setFechaIndiceElectronico(Calendar.getInstance());
-	// objetoExpedienteIndiceContenido.setOrden(1);
-	// objetoExpedienteIndiceContenido.setElementosIndizados(listObjetoExpedienteIndiceContenidoElementoIndizados);
-
-	// objetoExpedienteIndice.setFirmas(listFirmas);
-	// objetoExpedienteIndice.setIndiceContenido(objetoExpedienteIndiceContenido);
-
-	// objetoExpedienteENI.setIndice(objetoExpedienteIndice);
-
-	// // CONTENIDO
-	// ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-	// InputStream fileStream = file.getInputStream();
-	// String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-	// obDocContenido.setContenido(fileStream);
-	// obDocContenido.setNombreFormato(extension);
-	// objetoExpedienteENI.setVisualizacionIndice(obDocContenido);
-
-	// objetoExpedienteENI.setVersion(objetoExpedienteVersion);
-
-	// geENI.generateENIToFile(objetoExpedienteENI);
-
-	// return new ResponseEntity<>(null, HttpStatus.OK);
-	// }
 }

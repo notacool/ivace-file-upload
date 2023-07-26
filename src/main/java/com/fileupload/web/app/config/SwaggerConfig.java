@@ -26,7 +26,7 @@ public class SwaggerConfig {
 				// .contact(new Contact("", "", ""))
 				// .license("")
 				// .licenseUrl("")
-				.version("1.0.0")
+				.version("1.4.0")
 				.build();
 	}
 
