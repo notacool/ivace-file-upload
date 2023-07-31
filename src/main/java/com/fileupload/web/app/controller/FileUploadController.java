@@ -7,10 +7,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
 import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.Repository;
 import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.client.api.SessionFactory;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
@@ -33,7 +35,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -73,35 +74,113 @@ public class FileUploadController {
 	private String documentLibrary;
 	@Autowired
     private JwtUtils jwtUtil;
-	@PostMapping("/uploadFile/{codArea}/{codAnio}/{codConvocatoria}/{codExpediente}/{codProceso}/{codDocumentacion}")
+	@PostMapping("/uploadFile")
 	@ResponseBody
 	public ResponseEntity<String> uploadToAlfresco(@RequestParam("file") MultipartFile file,
-			@PathVariable("codArea") String codArea, @PathVariable("codAnio") String codAnio,
-			@PathVariable("codConvocatoria") String codConvocatoria,
-			@PathVariable("codExpediente") String codExpediente, @PathVariable("codProceso") String codProceso,
-			@PathVariable("codDocumentacion") String codDocumentacion,
+			@RequestHeader(value="codArea") String codArea, @RequestHeader(value="codAnio") String codAnio,
+			@RequestHeader(value="codConvocatoria") String codConvocatoria, @RequestHeader(value="codX") String codX,
+			@RequestHeader(value="codExpediente", required = false) String codExpediente, @RequestHeader(value="codProceso", required = false) String codProceso,
+			@RequestHeader(value="codDocumentacion") String codDocumentacion,
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
 			@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
 		
 		if (!jwtUtil.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		
 		try {
-			String[] metadata = new String[6];
+			String[] metadata = new String[7];
 			metadata[0] = codArea;
 			metadata[1] = codAnio;
 			metadata[2] = codConvocatoria;
-			metadata[3] = codExpediente;
-			metadata[4] = codProceso;
-			metadata[5] = codDocumentacion;
+			metadata[3] = codX;
+			metadata[4] = codExpediente;
+			metadata[5] = codProceso;
+			metadata[6] = codDocumentacion;
 			String documentDestination;
-			documentDestination = "Sites/ivace/documentLibrary/"+codArea+"/"+codAnio+"/"+codConvocatoria+"/"+codExpediente+"/"+codProceso+"/"+codDocumentacion;
+			if(codX.equals("Expediente")){
+				documentDestination = "Sites/ivace/documentLibrary/"+codArea+"/"+codAnio+"/"+codConvocatoria+"/"+codX+"/"+codExpediente+"/"+codProceso+"/"+codDocumentacion;
+			}else{
+				documentDestination = "Sites/ivace/documentLibrary/"+codArea+"/"+codAnio+"/"+codConvocatoria+"/"+codX+"/"+codDocumentacion;
+			}
 
 			if(!validator.isValidRequest(metadata)) {
 				return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			}
+			
+			String documentDestinationNom = "";
+			String nomArea = cuadroClasificacion.getMapaAreas().get(codArea);
+			String nomAnio = cuadroClasificacion.getMapaAnios().get(codAnio);
+			String nomConvocatoria = cuadroClasificacion.getMapaConvocatorias().get(codConvocatoria);
+			String nomX = cuadroClasificacion.getMapaX().get(codX);
+			if(codX.equals("Expediente")){
+				String nomExpediente = cuadroClasificacion.getMapaExpedientes().get(codExpediente);
+				String nomProceso = cuadroClasificacion.getMapaProcesos().get(codProceso);
+				LinkedHashMap<String, String> mapaActual = new LinkedHashMap<>();
+				switch (codProceso) {
+					case "P01":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoSolicitudes();
+						break;
+					case "P02":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoPreevaluaciontecnico();
+						break;
+					case "P03":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoComisionEvaluacionivace();
+						break;
+					case "P04":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoResolucionconcesion();
+						break;
+					case "P05":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoComunicacionconcesionabeneficiario();
+						break;
+					case "P06":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoAnticipoprestamo();
+						break;
+					case "P07":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoEjecuciondeproyecto();
+						break;
+					case "P08":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoJustificacionproyecto();
+						break;
+					case "P09":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoVerificaciondocumental();
+						break;
+					case "P10":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoVerificacionmaterial();
+						break;
+					case "P11":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoVerificacionfinal();
+						break;
+					case "P12":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoComunicacionserviciopago();
+						break;
+					case "P13":
+						mapaActual = cuadroClasificacion
+								.getMapaDocumentacionesProcesoPagosubvencion();
+						break;
+				}
+				String nomDocumentacion = mapaActual.get(codDocumentacion);
+				documentDestinationNom = documentLibrary+nomArea+"/"+nomAnio+"/"+nomConvocatoria+"/"+nomX+"/"+nomExpediente+"/"+nomProceso+"/"+nomDocumentacion;
+			} else if (codX.equals("CO Evaluación")){
+				String nomDocumentacion = cuadroClasificacion.getMapaDocumentacionesCOEvaluacion().get(codDocumentacion);
+				documentDestinationNom = documentLibrary+nomArea+"/"+nomAnio+"/"+nomConvocatoria+"/"+nomX+"/"+nomDocumentacion;
+			} else{
+				String nomDocumentacion = cuadroClasificacion.getMapaDocumentacionesNormativa().get(codDocumentacion);
+				documentDestinationNom = documentLibrary+nomArea+"/"+nomAnio+"/"+nomConvocatoria+"/"+nomX+"/"+nomDocumentacion;
 			}
 			
 			byte[] fileContent = file.getBytes();
@@ -125,15 +204,15 @@ public class FileUploadController {
 			// Creamos las carpetas, pueden ser una o 50
 			Folder parent = root;
 			String[] parts = null;
-			if (documentDestination.contains("/")) {
-				parts = documentDestination.split("/");
+			if (documentDestinationNom.contains("/")) {
+				parts = documentDestinationNom.split("/");
 			} else {
 				parts = new String[1];
-				parts[0] = documentDestination;
+				parts[0] = documentDestinationNom;
 			}
 
 			for (String folderName : parts) {
-				parent = createFolder(folderName, parent,"");
+				parent = createFolder(folderName, parent,documentDestination, documentDestinationNom);
 			}
 
 			// Creamos el archivo si no existe
@@ -166,15 +245,13 @@ public class FileUploadController {
 				if (gustavoId != "" && gustavoId != null) {
 					constraintViolationFound = find((Folder) root, Integer.parseInt(gustavoId), 0);
 					if (constraintViolationFound != "") {
-						logger.info("Could not set GustavoID - Constraint violation found.");
-						return ResponseEntity.status(HttpStatus.OK).build();
+						return ResponseEntity.badRequest().body("Could not set GustavoID - Constraint violation found.");
 					}
 				}
 				if (ulisesId != "" && ulisesId != null) {
 					constraintViolationFound = find((Folder) root, Integer.parseInt(ulisesId), 0);
 					if (constraintViolationFound != "") {
-						logger.info("Could not set UlisesID - Constraint violation found.");
-						return ResponseEntity.status(HttpStatus.OK).build();
+						return ResponseEntity.badRequest().body("Could not set UlisesID - Constraint violation found.");
 					}
 				}
 			} catch (Exception e) {
@@ -188,12 +265,12 @@ public class FileUploadController {
 					properties2.put("ids:ulisesID", ulisesId);
 				}
 			} catch (Exception e) {
-				logger.info("Gustavo/Ulises ID not present.");
+				return ResponseEntity.badRequest().body("Gustavo/Ulises ID not present.");
 			}
 			o.updateProperties(properties2, true);
 
 			logger.info("Document uploaded successfully");
-			return ResponseEntity.status(HttpStatus.OK).build();
+			return ResponseEntity.ok().body("Document uploaded successfully");
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 			System.out.println(e.getStackTrace());
@@ -214,149 +291,217 @@ public class FileUploadController {
 		}
 	}
 
-	public void generateFolderTag(String folderPath,String tag) {
+	// public void generateFolderTag(String folderPath,String tag) {
+	// 	SessionFactory factory = SessionFactoryImpl.newInstance();
+	// 	Map<String, String> parameter = new HashMap<String, String>();
+	// 	parameter.put(SessionParameter.USER, user);
+	// 	parameter.put(SessionParameter.PASSWORD, pass);
+	// 	parameter.put(SessionParameter.ATOMPUB_URL, url);
+	// 	parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+	// 	Session session = factory.getRepositories(parameter).get(0).createSession();
+	// 	CmisObject cmisObject = session.getObjectByPath("/"+folderPath);
+	// 	String nodeId = cmisObject.getId();
+	// 	RestTemplate restTemplate = new RestTemplate();
+    //     String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"+nodeId+"/tags";
+    //     HttpHeaders headers = new HttpHeaders();
+    //     headers.setBasicAuth(user, pass);
+    //     headers.setContentType(MediaType.APPLICATION_JSON);
+	// 	String jsonTag = "{\"tag\":\""
+	// 			+ tag
+	// 			+ "\"}";
+    //     HttpEntity<String> requestEntity = new HttpEntity<>(jsonTag, headers);
+    //     ResponseEntity<String> responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+
+	// }
+	@PostMapping("/generateDirStructure")
+	@ResponseBody
+	public ResponseEntity<String> generateDirStruct(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+		// Only allowed for the JWT associated with the NOTACOOLADMIN user
+		if (!jwtUtil.verifyToken(authorizationHeader)
+				|| !jwtUtil.extractSubject(authorizationHeader).equals("NOTACOOLADMIN")) {
+			System.out.println("Invalid JWT");
+			return ResponseEntity.badRequest().body("Invalid JWT");
+		}
+
+		ArrayList<String> listNom = new ArrayList<String>();
+		ArrayList<String> listCod = new ArrayList<String>();
+		String[] codLiterals = new String[7];
+		String[] nomLiterals = new String[7];
+		cuadroClasificacion.getMapaAreas().forEach((k, v) -> {
+			logger.info(k + " " + v);
+			codLiterals[0] = documentLibrary + k;
+			nomLiterals[0] = documentLibrary + v;
+			listCod.add(documentLibrary + k);
+			listNom.add(documentLibrary + v);
+			cuadroClasificacion.getMapaAnios().forEach((i, b) -> {
+				if ((k.equals("AA01") && i.equals("2019")) || (k.equals("AA02") && i.equals("2021"))
+						|| (k.equals("AA03") && i.equals("2020"))
+						|| (k.equals("AA04") && i.equals("2023"))) {
+					listCod.add(codLiterals[0] + "/" + i);
+					listNom.add(nomLiterals[0] + "/" + b);
+					codLiterals[1] = codLiterals[0] + "/" + i;
+					nomLiterals[1] = nomLiterals[0] + "/" + b;
+					cuadroClasificacion.getMapaConvocatorias().forEach((c, r) -> {
+						if ((k.equals("AA01") && i.equals("2019") && c.equals("IMEREA"))
+								|| (k.equals("AA02") && i.equals("2021") && c.equals("IMDIGA"))
+								|| (k.equals("AA03") && i.equals("2020") && c.equals("ITATUT"))
+								|| (k.equals("AA04") && i.equals("2023") && c.equals("AAAAAA"))) {
+							listCod.add(codLiterals[1] + "/" + c);
+							listNom.add(nomLiterals[1] + "/" + r);
+							codLiterals[2] = codLiterals[1] + "/" + c;
+							nomLiterals[2] = nomLiterals[1] + "/" + r;
+							cuadroClasificacion.getMapaX().forEach((x, y) -> {
+								listCod.add(codLiterals[2] + "/" + x);
+								listNom.add(nomLiterals[2] + "/" + y);
+								codLiterals[3] = codLiterals[2] + "/" + x;
+								nomLiterals[3] = nomLiterals[2] + "/" + y;
+								if (x.equals("Expediente")) {
+									cuadroClasificacion.getMapaExpedientes().forEach((l, m) -> {
+										if ((k.equals("AA01") && i.equals("2019") && c.equals("IMEREA")
+												&& l.equals("002"))
+												|| (k.equals("AA02") && i.equals("2021") && c.equals("IMDIGA")
+														&& l.equals("018"))
+												|| (k.equals("AA02") && i.equals("2021") && c.equals("IMDIGA")
+														&& l.equals("381"))
+												|| (k.equals("AA03") && i.equals("2020") && c.equals("ITATUT")
+														&& l.equals("017"))
+												|| (k.equals("AA04") && i.equals("2023") && c.equals("AAAAAA")
+														&& l.equals("999"))) {
+											listCod.add(codLiterals[3] + "/" + l);
+											listNom.add(nomLiterals[3] + "/" + m);
+											codLiterals[4] = codLiterals[3] + "/" + l;
+											nomLiterals[4] = nomLiterals[3] + "/" + m;
+										}
+
+										cuadroClasificacion.getMapaProcesos().forEach((q, w) -> {
+											listCod.add(codLiterals[4] + "/" + q);
+											listNom.add(nomLiterals[4] + "/" + w);
+											codLiterals[5] = codLiterals[4] + "/" + q;
+											nomLiterals[5] = nomLiterals[4] + "/" + w;
+											LinkedHashMap<String, String> mapaActual = new LinkedHashMap<>();
+											switch (q) {
+												case "P01":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoSolicitudes();
+													break;
+												case "P02":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoPreevaluaciontecnico();
+													break;
+												case "P03":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoComisionEvaluacionivace();
+													break;
+												case "P04":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoResolucionconcesion();
+													break;
+												case "P05":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoComunicacionconcesionabeneficiario();
+													break;
+												case "P06":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoAnticipoprestamo();
+													break;
+												case "P07":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoEjecuciondeproyecto();
+													break;
+												case "P08":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoJustificacionproyecto();
+													break;
+												case "P09":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoVerificaciondocumental();
+													break;
+												case "P10":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoVerificacionmaterial();
+													break;
+												case "P11":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoVerificacionfinal();
+													break;
+												case "P12":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoComunicacionserviciopago();
+													break;
+												case "P13":
+													mapaActual = cuadroClasificacion
+															.getMapaDocumentacionesProcesoPagosubvencion();
+													break;
+											}
+											mapaActual.forEach((d, s) -> {
+												listCod.add(codLiterals[5] + "/" + d);
+												listNom.add(nomLiterals[5] + "/" + s);
+											});
+										});
+									});
+								} else if (x.equals("CO Evaluación")) {
+									cuadroClasificacion.getMapaDocumentacionesCOEvaluacion().forEach((a, t) -> {
+										listCod.add(codLiterals[3] + "/" + a);
+										listNom.add(nomLiterals[3] + "/" + t);
+										codLiterals[4] = codLiterals[3] + "/" + a;
+										nomLiterals[4] = nomLiterals[3] + "/" + t;
+									});
+								} else {
+									cuadroClasificacion.getMapaDocumentacionesNormativa().forEach((a, t) -> {
+										listCod.add(codLiterals[3] + "/" + a);
+										listNom.add(nomLiterals[3] + "/" + t);
+										codLiterals[4] = codLiterals[3] + "/" + a;
+										nomLiterals[4] = nomLiterals[3] + "/" + t;
+									});
+								}
+							});
+						}
+					});
+				}
+			});
+		});
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
+
+		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
 		parameter.put(SessionParameter.ATOMPUB_URL, url);
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-		Session session = factory.getRepositories(parameter).get(0).createSession();
-		CmisObject cmisObject = session.getObjectByPath("/"+folderPath);
-		String nodeId = cmisObject.getId();
-		RestTemplate restTemplate = new RestTemplate();
-        String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"+nodeId+"/tags";
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(user, pass);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-		String jsonTag = "{\"tag\":\""
-				+ tag
-				+ "\"}";
-        HttpEntity<String> requestEntity = new HttpEntity<>(jsonTag, headers);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
 
-	}
-	@PostMapping("/generateDirStructure")
-	@ResponseBody
-	public String generateDirStruct(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
-		//Only allowed for the JWT associated with the NOTACOOLADMIN user
-		if (!jwtUtil.verifyToken(authorizationHeader) || jwtUtil.extractSubject(authorizationHeader) != "NOTACOOLADMIN") {
-			System.out.println("Invalid JWT");
-			return "";
-		}
-		
-		ArrayList<String> list = new ArrayList<String>();
-		String[] literals = new String[5];
-		cuadroClasificacion.getMapaAreas().forEach((k, v) -> {
-			logger.info(k + " " + v);
-			literals[0] = documentLibrary + k;
-			list.add(documentLibrary + k);
-			cuadroClasificacion.getMapaAnios().forEach((i, b) -> {
-				list.add(literals[0] + "/" + i);
-				literals[1] = literals[0] + "/" + i;
-				cuadroClasificacion.getMapaConvocatorias().forEach((c, r) -> {
-					list.add(literals[1] + "/" + c);
-					literals[2] = literals[1] + "/" + c;
-					cuadroClasificacion.getMapaExpedientes().forEach((l, m) -> {
-						list.add(literals[2] + "/" + l);
-						literals[3] = literals[2] + "/" + l;
-						cuadroClasificacion.getMapaProcesos().forEach((q, w) -> {
-							list.add(literals[3] + "/" + q);
-							literals[4] = literals[3] + "/" + q;
-							LinkedHashMap<String, String> mapaActual = new LinkedHashMap<>();
-							switch (q) {
-							case "P01":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoSolicitudes();
-								break;
-							case "P02":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoPreevaluaciontecnico();
-								break;
-							case "P03":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoComisionEvaluacionivace();
-								break;
-							case "P04":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoResolucionconcesion();
-								break;
-							case "P05":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoComunicacionconcesionabeneficiario();
-								break;
-							case "P06":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoAnticipoprestamo();
-								break;
-							case "P07":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoEjecuciondeproyecto();
-								break;
-							case "P08":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoJustificacionproyecto();
-								break;
-							case "P09":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificaciondocumental();
-								break;
-							case "P10":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificacionmaterial();
-								break;
-							case "P11":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoVerificacionfinal();
-								break;
-							case "P12":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoComunicacionserviciopago();
-								break;
-							case "P13":
-								mapaActual = cuadroClasificacion.getMapaDocumentacionesProcesoPagosubvencion();
-								break;
-							}
-							mapaActual.forEach((d, s) -> {
-								list.add(literals[4] + "/" + d);
-							});
-						});
-					});
-				});
-			});
-		});
-		
-		
-		
-		
-		
-		Map<String, Object> properties = new HashMap<String, Object>();
-		// Configuraciones básicas para para conectarse
-					SessionFactory factory = SessionFactoryImpl.newInstance();
-					Map<String, String> parameter = new HashMap<String, String>();
+		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+		List<Repository> repositories = factory.getRepositories(parameter);
+		Session session = repositories.get(0).createSession();
+		Folder root = session.getRootFolder();
 
-					// Credenciales del usuario y url de conexión
-					parameter.put(SessionParameter.USER, user);
-					parameter.put(SessionParameter.PASSWORD, pass);
-					parameter.put(SessionParameter.ATOMPUB_URL, url);
-					parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
-					
+		// Creamos las carpetas, pueden ser una o 50
+		Folder parent = root;
+		String[] parts = null;
 
-					// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
-					Session session = factory.getRepositories(parameter).get(0).createSession();
-					Folder root = session.getRootFolder();
+		listCod.removeIf(p -> ((!p.contains("Expediente")) && (p.split("/").length > 8)));
+		listNom.removeIf(p -> ((!p.contains("Expediente")) && (p.split("/").length > 8)));
 
-					// Creamos las carpetas, pueden ser una o 50
-					Folder parent = root;
-					String[] parts = null;
-					
-		//recorremos la lista de directorios
-		for(int i=0;i<list.size();i++) {
+		// recorremos la lista de directorios
+		for (int i = 0; i < listCod.size(); i++) {
 			parent = root;
-			if (list.get(i).contains("/")) {
-				parts = list.get(i).split("/");
+			if (listNom.get(i).contains("/")) {
+				parts = listNom.get(i).split("/");
 			} else {
 				parts = new String[1];
-				parts[0] = list.get(i);
+				parts[0] = listNom.get(i);
 			}
 
 			for (String folderName : parts) {
-				parent = createFolder(folderName, parent,list.get(i));
+				parent = createFolder(folderName, parent, listCod.get(i), listNom.get(i));
 			}
-			logger.info("Creando el directorio: "+list.get(i));
+			logger.info("Creando el directorio: " + listNom.get(i));
 		}
-		logger.info("Terminados de crear los " + list.size() + " directorios");
-		
-		
-		return "";
+		session.clear();
+
+		logger.info("Terminados de crear los " + listCod.size() + " directorios");
+
+		return ResponseEntity.ok().body("Directory structure created succesfully!");
 	}
 	
 	
@@ -367,7 +512,7 @@ public class FileUploadController {
 			@RequestHeader("gustavoID") int gustavoID) {
 		if (!jwtUtil.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
@@ -443,7 +588,7 @@ public class FileUploadController {
 			@RequestHeader("ulisesID") int ulisesID) {
 		if (!jwtUtil.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		SessionFactory factory = SessionFactoryImpl.newInstance();
 		Map<String, String> parameter = new HashMap<String, String>();
@@ -481,14 +626,13 @@ public class FileUploadController {
 	}
 
 	
-	public Folder createFolder(String folderName, Folder root, String fullPath) {
+	public Folder createFolder(String folderName, Folder root, String fullPathCod, String fullPathNom) {
 		Boolean folderExists = false;
 		Map<String, Object> properties = new HashMap<String, Object>();
 		properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
 		properties.put(PropertyIds.NAME, folderName);
-		LinkedHashMap<String, String> mapaAsociado = null;
 		String description = null;
-		String tag = "";
+		String title = null;
 
 		Folder parent = null;
 		for (CmisObject r : root.getChildren()) {
@@ -497,90 +641,126 @@ public class FileUploadController {
 				parent = (Folder) r;
 			}
 		}
+
 		// create the folder
-		
 		if (!folderExists) {
-			String[] splittedPath = fullPath.split("/");
-			if(splittedPath.length == 4) {
+			LinkedHashMap<String, String> mapaAsociado = new LinkedHashMap<>();
+			String[] splittedPathNom = fullPathNom.split("/");
+			String[] splittedPathCod = fullPathCod.split("/");
+			if (splittedPathNom.length == 4) {
 				logger.info("Estamos creando el Area");
 				mapaAsociado = cuadroClasificacion.getMapaAreas();
-				description = mapaAsociado.get(splittedPath[3]);
-				tag = description;
-				}
-			if(splittedPath.length == 5) {logger.info("Estamos creando el Año");}
-			if(splittedPath.length == 6) {
+				description = splittedPathNom[3];
+				title = splittedPathCod[3];
+			}
+			if (splittedPathNom.length == 5) {
+				logger.info("Estamos creando el Año");
+				mapaAsociado = cuadroClasificacion.getMapaAnios();
+				description = splittedPathNom[3] + " " + splittedPathNom[4];
+				title = splittedPathCod[3] + " " + splittedPathCod[4];
+			}
+			if (splittedPathNom.length == 6) {
 				logger.info("Estamos creando la convocatoria");
 				mapaAsociado = cuadroClasificacion.getMapaConvocatorias();
-				description = mapaAsociado.get(splittedPath[5]);
-				tag = description;
+				description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5];
+				title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5];
 			}
-			if(splittedPath.length == 7) {
-				logger.info("Estamos creando el expediente");
-				mapaAsociado = cuadroClasificacion.getMapaExpedientes();
-				description = mapaAsociado.get(splittedPath[6]);
-				tag = description;
-				}
-			if(splittedPath.length == 8) {
-				logger.info("Estamos creando el proceso");
-				mapaAsociado = cuadroClasificacion.getMapaProcesos();
-				description = mapaAsociado.get(splittedPath[7]);
-				tag = description;
+			if (splittedPathNom.length == 7) {
+				logger.info("Estamos creando el X");
+				mapaAsociado = cuadroClasificacion.getMapaX();
+				description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
+						+ splittedPathNom[6];
+				title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
+						+ splittedPathCod[6];
 			}
-			if(splittedPath.length == 9) {
-				logger.info("Estamos creando el documento");
-				switch(splittedPath[7]) {
-				case "P01":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P01");
-					break;
-				case "P02":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P02");
-					break;
-				case "P03":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P03");
-					break;
-				case "P04":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P04");
-					break;
-				case "P05":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P05");
-					break;
-				case "P06":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P06");
-					break;
-				case "P07":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P07");
-					break;
-				case "P08":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P08");
-					break;
-				case "P09":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P09");
-					break;
-				case "P10":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P10");
-					break;
-				case "P11":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P11");
-					break;
-				case "P12":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P12");
-					break;
-				case "P13":
-					mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P13");
-					break;
+			if(fullPathCod.contains("Expediente")){
+				if (splittedPathNom.length == 8){
+					logger.info("Estamos creando el Expediente");
+					mapaAsociado = cuadroClasificacion.getMapaExpedientes();
+					description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
+						+ splittedPathNom[6] + " " + splittedPathNom[7];
+					title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
+						+ splittedPathCod[6] + " " + splittedPathCod[7];
 				}
-				description = mapaAsociado.get(splittedPath[8]);
-				tag = description;
+				if (splittedPathNom.length == 9) {
+					logger.info("Estamos creando el proceso");
+					mapaAsociado = cuadroClasificacion.getMapaProcesos();
+					description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
+							+ splittedPathNom[6] + " " + splittedPathNom[7] + " " + splittedPathNom[8];
+					title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
+							+ splittedPathCod[6] + " " + splittedPathCod[7] + " " + splittedPathCod[8];
+				}
+				if (splittedPathNom.length == 10) {
+					logger.info("Estamos creando el documento");
+					switch (splittedPathNom[8]) {
+						case "P01":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P01");
+							break;
+						case "P02":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P02");
+							break;
+						case "P03":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P03");
+							break;
+						case "P04":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P04");
+							break;
+						case "P05":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P05");
+							break;
+						case "P06":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P06");
+							break;
+						case "P07":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P07");
+							break;
+						case "P08":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P08");
+							break;
+						case "P09":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P09");
+							break;
+						case "P10":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P10");
+							break;
+						case "P11":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P11");
+							break;
+						case "P12":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P12");
+							break;
+						case "P13":
+							mapaAsociado = cuadroClasificacion.getMapaProcesosYDocumentaciones().get("P13");
+							break;
+					}
+					logger.info(mapaAsociado.toString());
+					description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
+							+ splittedPathNom[6] + " " + splittedPathNom[7] + " " + splittedPathNom[8] + " " + splittedPathNom[9];
+	
+					title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
+							+ splittedPathCod[6] + " " + splittedPathCod[7] + " " + splittedPathCod[8] + " " + splittedPathCod[9];
+				}
+			}else{
+				if (splittedPathNom.length == 8) {
+					logger.info("Estamos creando el documento");
+					description = splittedPathNom[3] + " " + splittedPathNom[4] + " " + splittedPathNom[5] + " "
+							+ splittedPathNom[6] + " " + splittedPathNom[7];
+
+					title = splittedPathCod[3] + " " + splittedPathCod[4] + " " + splittedPathCod[5] + " "
+							+ splittedPathCod[6] + " " + splittedPathCod[7];
+				}
 			}
 
-			
+			properties.put(PropertyIds.OBJECT_TYPE_ID, "cmis:folder");
+
+			List<String> secondary = new ArrayList<>();
+			secondary.add("P:cm:titled");
+			properties.put(PropertyIds.SECONDARY_OBJECT_TYPE_IDS, secondary);
+			properties.put("cm:title", title);
 			properties.put(PropertyIds.DESCRIPTION, description);
 
 			parent = root.createFolder(properties);
-			if (tag.length() != 0) {
-				generateFolderTag(fullPath, tag);
-			}
-		} else {
+
 		}
 		return parent;
 	}

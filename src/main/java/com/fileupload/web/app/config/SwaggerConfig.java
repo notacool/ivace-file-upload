@@ -1,4 +1,5 @@
 package com.fileupload.web.app.config;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,6 +12,10 @@ import springfox.documentation.spring.web.plugins.Docket;
 @Configuration
 //@EnableSwagger2
 public class SwaggerConfig {
+
+	@Value("${version}")
+	private String ver;
+
 	 @Bean
 	 public Docket api() {
 		   return new Docket(DocumentationType.SWAGGER_2).apiInfo(apiInfo())
@@ -25,7 +30,7 @@ public class SwaggerConfig {
 //	                .contact(new Contact("", "", ""))
 //	                .license("")
 //	                .licenseUrl("")
-	                .version("1.0.0")
+	                .version(ver)
 	                .build();
 	    }
 
