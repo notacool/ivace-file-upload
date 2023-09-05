@@ -12,13 +12,12 @@ import com.fileupload.web.app.controller.FileUploadController;
 
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class }	)
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class })
 @EnableJpaRepositories("com.fileupload.web.app.repository")
 @EnableSwagger2
 public class AlfrescoFileUploadApplication {
 
 	static Logger logger = LoggerFactory.getLogger(FileUploadController.class);
-
 	public static void main(String[] args) {
 		ConfigurableApplicationContext ctx = SpringApplication.run(AlfrescoFileUploadApplication.class, args);
 		String str = ctx.getEnvironment().getProperty("version");
