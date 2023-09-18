@@ -115,7 +115,7 @@ public class FileUploadController {
 			@RequestHeader(value = "nomProceso", required = false) String nomProceso,
 			@RequestHeader(value = "nomDocumentacion") String nomDocumentacion,
 			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-			@RequestHeader(value = "gustavoId", required = false) String gustavoId,
+			@RequestHeader(value = "gustavoId", required = false) Long gustavoId,
 			@RequestHeader(value = "ulisesId", required = false) String ulisesId) {
 
 		try {
@@ -179,7 +179,7 @@ public class FileUploadController {
 			ContentStream contentStream = new ContentStreamImpl(file.getOriginalFilename(),
 					BigInteger.valueOf(fileContent.length), file.getContentType(), stream);
 
-			if (gustavoId != "" && gustavoId != null) {
+			if (gustavoId != null) {
 				Document doc = documentRepository.findByGustavoID(gustavoId);
 
 				if (doc != null) {
@@ -203,7 +203,7 @@ public class FileUploadController {
 				} else {
 					// Creamos el documento en el Alfresco
 					CmisObject o = folder.createDocument(properties2, contentStream, VersioningState.MAJOR);
-					properties2.put("ids:gustavoID", gustavoId);
+					properties2.put("ids:gustavoID", gustavoId.toString());
 					o.updateProperties(properties2, true);
 
 					Document newDocument = new Document();

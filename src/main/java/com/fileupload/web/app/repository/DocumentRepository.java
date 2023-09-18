@@ -19,7 +19,7 @@ public class DocumentRepository extends GenericRepository {
         return DataAccessUtils.singleResult(query.getResultList());
     }
 
-    public Document findByGustavoID(String gustavoId) {
+    public Document findByGustavoID(Long gustavoId) {
         TypedQuery<Document> query = entityManager
                 .createQuery("from Document d where d.gustavoId = :gustavoId ", Document.class)
                 .setParameter("gustavoId", gustavoId);
