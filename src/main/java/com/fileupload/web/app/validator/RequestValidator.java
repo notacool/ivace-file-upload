@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class RequestValidator {
 
-	public boolean validateIDS(Long gustavoID, String ulisesID) {
+	public boolean validateIDS(String gustavoID, String ulisesID) {
 		if (gustavoID == null && ulisesID == null) {
 			return false;
 		} else if (gustavoID != null && ulisesID != null) {

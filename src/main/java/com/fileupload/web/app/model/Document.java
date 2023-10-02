@@ -15,7 +15,7 @@ public class Document {
 	private String alfrescoId;
 
     @Column(name = "gustavoId", unique = true)
-	private Long gustavoId;
+	private String gustavoId;
 
     @Column(name = "ulisesId", unique = true)
 	private String ulisesId;
@@ -31,11 +31,11 @@ public class Document {
         this.id = id;
     }
 
-    public Long getGustavoId() {
+    public String getGustavoId() {
         return gustavoId;
     }
 
-    public void setGustavoId(Long gustavoId) {
+    public void setGustavoId(String gustavoId) {
         this.gustavoId = gustavoId;
     }
 
