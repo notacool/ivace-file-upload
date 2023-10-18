@@ -358,7 +358,9 @@ public class FileUploadController {
 			headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 			HttpEntity<String> entity = new HttpEntity<>(headers);
 			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity, String.class);
-			documentRepository.deleteById(doc.getId());
+			if (response.getStatusCode() == HttpStatus.NO_CONTENT){
+				documentRepository.deleteById(doc.getId());
+			}
 			return response;
 		}
 	}
@@ -395,7 +397,9 @@ public class FileUploadController {
 			headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 			HttpEntity<String> entity = new HttpEntity<>(headers);
 			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity, String.class);
-			documentRepository.deleteById(doc.getId());
+			if (response.getStatusCode() == HttpStatus.NO_CONTENT){
+				documentRepository.deleteById(doc.getId());
+			}
 			return response;
 		}
 	}
@@ -442,9 +446,9 @@ public class FileUploadController {
 					.header("Content-Type", "application/json")
 					.build();
 
-			client.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-			return ResponseEntity.ok().build();
+			return ResponseEntity.status(response.statusCode()).build();
 		}
 
 	}
@@ -491,9 +495,9 @@ public class FileUploadController {
 					.header("Content-Type", "application/json")
 					.build();
 
-			client.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-			return ResponseEntity.ok().build();
+			return ResponseEntity.status(response.statusCode()).build();
 		}
 
 	}
@@ -529,193 +533,4 @@ public class FileUploadController {
 		}
 		return documentLibrary + joiner.toString();
 	}
-
-	// @PostMapping("/generate-eni")
-	// @ResponseBody
-	// public ResponseEntity<String> GenerateDocumentENI(
-	// 		@RequestPart("file") MultipartFile file,
-	// 		String pathDestinoLocal,
-	// 		String MetadatoEstadoElaboracion,
-	// 		String MetadatoOrganos,
-	// 		String MetadatoIdDocumento,
-	// 		String MetadatoVersionNTI) throws IOException, Exception {
-
-	// 	GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
-	// 	ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
-	// 	ObjetoDocumentoMetadatos obMetadatos = new ObjetoDocumentoMetadatos();
-	// 	ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
-	// 	GregorianCalendar gCalendar = new GregorianCalendar();
-	// 	ArrayList<String> organos = new ArrayList<String>();
-
-	// 	if (!validator.isValidDocumentId(MetadatoIdDocumento)) {
-	// 		return new ResponseEntity<>(
-	// 				"Identificador introducido no válido. Debe ser de la forma ES_LLNNNNNNN_NNNN_XXXXXXX con un máximo de 52 caracteres (L = Letra, N = Numeros).",
-	// 				HttpStatus.BAD_REQUEST);
-	// 	}
-
-	// 	organos.add(MetadatoOrganos);
-
-	// 	switch (MetadatoEstadoElaboracion) {
-	// 		default:
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-	// 			break;
-	// 		case "ORIGINAL":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-	// 			break;
-	// 		case "COPIA ELECTRONICA AUTENTICA CON CAMBIO DE FORMATO":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_02);
-	// 			break;
-	// 		case "COPIA ELECTRONICA AUTENTICA DE DOCUMENTO PAPEL":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_03);
-	// 			break;
-	// 		case "COPIA ELECTRONICA PARCIAL AUTENTICA":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_04);
-	// 			break;
-	// 		case "OTROS":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
-	// 			break;
-	// 	}
-
-	// 	obMetadatos.setEstadoElaboracion(estEl);
-	// 	obMetadatos.setVersionNTI(MetadatoVersionNTI);
-	// 	obMetadatos.setIdentificadorDocumento(MetadatoIdDocumento);
-	// 	obMetadatos.setOrgano(organos);
-	// 	obMetadatos.setFechaCaptura(gCalendar);
-	// 	obMetadatos.setTipoDocumental(EnumeracionDocumentoTipoDocumental.TD_99);
-
-	// 	eni.setMetadatos(obMetadatos);
-
-	// 	ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
-	// 	listFirmas.add(new FirmaENI());
-	// 	listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_01);
-	// 	listFirmas.get(0).setCsv("sample csv code");
-	// 	listFirmas.get(0).setRegulacionCsv("sample regulation csv code");
-
-	// 	eni.setFirmas(listFirmas);
-
-	// 	ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-	// 	InputStream fileStream = file.getInputStream();
-	// 	String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-	// 	obDocContenido.setContenido(fileStream);
-	// 	obDocContenido.setNombreFormato(extension);
-	// 	eni.setContenidoDocumento(obDocContenido);
-
-	// 	if (ValidateENI(eni)) {
-	// 		InputStream fis = gdENI.generateENI(eni);
-	// 		File f = new File(pathDestinoLocal + "\\" + MetadatoIdDocumento + ".xml");
-	// 		FileUtils.copyInputStreamToFile(fis, f);
-	// 		return new ResponseEntity<>(null, HttpStatus.OK);
-	// 	} else {
-	// 		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-	// 	}
-	// }
-
-	// @PostMapping("/generate-eni-and-upload-to-alfresco")
-	// @ResponseBody
-	// public ResponseEntity<String> GenerateDocumentENIAndUploadToAlfresco(
-	// 		@RequestPart("file") MultipartFile file,
-	// 		@RequestHeader("user") String user,
-	// 		@RequestHeader("password") String password,
-	// 		@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-	// 		@RequestHeader(value = "gustavoId", required = false) String gustavoId,
-	// 		@RequestHeader(value = "ulisesId", required = false) String ulisesId,
-	// 		String MetadatoEstadoElaboracion,
-	// 		String MetadatoOrganos,
-	// 		String MetadatoIdDocumento,
-	// 		String MetadatoVersionNTI,
-	// 		String pathDestino,
-	// 		String codArea,
-	// 		String codAnio,
-	// 		String codConvocatoria,
-	// 		String codX,
-	// 		String codExpediente,
-	// 		String codProceso,
-	// 		String codDocumentacion,
-	// 		String nomArea,
-	// 		String nomAnio,
-	// 		String nomConvocatoria,
-	// 		String nomX,
-	// 		String nomExpediente,
-	// 		String nomProceso,
-	// 		String nomDocumentacion) throws IOException, Exception {
-
-	// 	GenerateDocumentENIImpl gdENI = new GenerateDocumentENIImpl();
-	// 	ObjetoDocumentoENI eni = new ObjetoDocumentoENI();
-	// 	ObjetoDocumentoMetadatos obMetadatos = new ObjetoDocumentoMetadatos();
-	// 	ObjetoDocumentoMetadatosEstadoElaboracion estEl = new ObjetoDocumentoMetadatosEstadoElaboracion();
-	// 	GregorianCalendar gCalendar = new GregorianCalendar();
-	// 	ArrayList<String> organos = new ArrayList<String>();
-
-	// 	organos.add(MetadatoOrganos);
-
-	// 	switch (MetadatoEstadoElaboracion) {
-	// 		default:
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-	// 			break;
-	// 		case "ORIGINAL":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_01);
-	// 			break;
-	// 		case "COPIA ELECTRONICA AUTENTICA CON CAMBIO DE FORMATO":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_02);
-	// 			break;
-	// 		case "COPIA ELECTRONICA AUTENTICA DE DOCUMENTO PAPEL":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_03);
-	// 			break;
-	// 		case "COPIA ELECTRONICA PARCIAL AUTENTICA":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_04);
-	// 			break;
-	// 		case "OTROS":
-	// 			estEl.setValorEstadoElaboracion(EnumeracionDocumentoEstadoElaboracion.EE_99);
-	// 			break;
-	// 	}
-
-	// 	obMetadatos.setEstadoElaboracion(estEl);
-	// 	obMetadatos.setVersionNTI(MetadatoVersionNTI);
-	// 	obMetadatos.setIdentificadorDocumento(MetadatoIdDocumento);
-	// 	obMetadatos.setOrgano(organos);
-	// 	obMetadatos.setFechaCaptura(gCalendar);
-	// 	obMetadatos.setTipoDocumental(EnumeracionDocumentoTipoDocumental.TD_99);
-
-	// 	eni.setMetadatos(obMetadatos);
-
-	// 	ArrayList<FirmaENI> listFirmas = new ArrayList<FirmaENI>();
-	// 	listFirmas.add(new FirmaENI());
-	// 	listFirmas.get(0).setEnumeracionDocumentoTipoFirma(EnumeracionDocumentoTipoFirma.TF_01);
-	// 	listFirmas.get(0).setCsv("sample csv code");
-	// 	listFirmas.get(0).setRegulacionCsv("sample regulation csv code");
-
-	// 	eni.setFirmas(listFirmas);
-
-	// 	ObjetoDocumentoContenido obDocContenido = new ObjetoDocumentoContenido();
-	// 	InputStream fileStream = file.getInputStream();
-	// 	String extension = FilenameUtils.getExtension(file.getOriginalFilename());
-	// 	obDocContenido.setContenido(fileStream);
-	// 	obDocContenido.setNombreFormato(extension);
-	// 	eni.setContenidoDocumento(obDocContenido);
-
-	// 	if (ValidateENI(eni)) {
-	// 		File f = gdENI.generateENIToFile(eni);
-	// 		FileInputStream input = new FileInputStream(f);
-	// 		MultipartFile multipartFile = new MockMultipartFile(
-	// 				f.getName().substring(0, f.getName().indexOf('-')) + ".xml",
-	// 				f.getName().substring(0, f.getName().indexOf('-')) + ".xml", null,
-	// 				IOUtils.toByteArray(input));
-	// 		uploadToAlfresco(multipartFile, nomArea, nomAnio, nomConvocatoria, nomX, nomExpediente, nomProceso,
-	// 				nomDocumentacion, codArea, codAnio, codConvocatoria, codX, codExpediente, codProceso, codDocumentacion, user, password,
-	// 				authorizationHeader, gustavoId, ulisesId);
-
-	// 		return new ResponseEntity<>(null, HttpStatus.OK);
-	// 	} else {
-	// 		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
-	// 	}
-	// }
-
-	// public static boolean ValidateENI(ObjetoDocumentoENI file) {
-	// 	try {
-	// 		ValideDocumentENI.validaDocumentENI(file);
-	// 	} catch (DocumentENIValidationException e) {
-	// 		return false;
-	// 	}
-	// 	return true;
-	// }
 }
