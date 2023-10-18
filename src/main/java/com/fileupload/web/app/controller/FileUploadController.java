@@ -11,7 +11,6 @@ import java.net.http.HttpResponse;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 import java.util.StringJoiner;
 
 import org.apache.chemistry.opencmis.client.api.CmisObject;
@@ -37,7 +36,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.RequestEntity.BodyBuilder;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -52,8 +50,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.fileupload.web.app.model.Document;
-import com.fileupload.web.app.model.Node;
-import com.fileupload.web.app.model.PropertiesObject;
 import com.fileupload.web.app.model.TCredentials;
 import com.fileupload.web.app.repository.CredentialsRepository;
 import com.fileupload.web.app.repository.DocumentRepository;
@@ -362,8 +358,8 @@ public class FileUploadController {
 			headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 			HttpEntity<String> entity = new HttpEntity<>(headers);
 			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity, String.class);
+			documentRepository.deleteById(doc.getId());
 			return response;
-
 		}
 	}
 
@@ -399,13 +395,13 @@ public class FileUploadController {
 			headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 			HttpEntity<String> entity = new HttpEntity<>(headers);
 			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity, String.class);
+			documentRepository.deleteById(doc.getId());
 			return response;
 		}
 	}
 
 	@PutMapping("/updateByGustavo")
-	public ResponseEntity<byte[]> updateGustavoFile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, 
-		@RequestHeader("gustavoID") String gustavoID, @RequestHeader("name") String name, @RequestHeader("title") String title, @RequestHeader("description") String description) throws IOException, InterruptedException{
+	public ResponseEntity<byte[]> updateGustavoFile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("gustavoID") String gustavoID, @RequestHeader("name") String name, @RequestHeader("title") String title, @RequestHeader("description") String description) throws IOException, InterruptedException{
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -424,6 +420,55 @@ public class FileUploadController {
 		Session session = factory.getRepositories(parameter).get(0).createSession();
 
 		Document doc = documentRepository.findByGustavoID(gustavoID);
+
+		if(doc == null)
+			return ResponseEntity.notFound().build();
+		else{
+			String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
+					+ doc.getAlfrescoId() + "/";
+			HttpClient client = HttpClient.newHttpClient();
+			HttpHeaders headers = new HttpHeaders();
+			headers.setBasicAuth(user, pass);
+			JSONObject properties = new JSONObject();
+				properties.put("cm:title", title);
+				properties.put("cm:description", description);
+			JSONObject jsonNode = new JSONObject();
+				jsonNode.put("name", name);
+				jsonNode.put("properties", properties);
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(url))
+					.PUT(HttpRequest.BodyPublishers.ofString(jsonNode.toString()))
+					.header("Authorization", headers.get("Authorization").get(0))
+					.header("Content-Type", "application/json")
+					.build();
+
+			client.send(request, HttpResponse.BodyHandlers.ofString());
+
+			return ResponseEntity.ok().build();
+		}
+
+	}
+
+	@PutMapping("/updateByUlises")
+	public ResponseEntity<byte[]> updateUlisesFile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("ulisesID") String ulisesID, @RequestHeader("name") String name, @RequestHeader("title") String title, @RequestHeader("description") String description) throws IOException, InterruptedException{
+
+		if (!JwtUtils.verifyToken(authorizationHeader)) {
+			System.out.println("Invalid JWT");
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		SessionFactory factory = SessionFactoryImpl.newInstance();
+		Map<String, String> parameter = new HashMap<String, String>();
+
+		// Credenciales del usuario y url de conexión
+		parameter.put(SessionParameter.USER, user);
+		parameter.put(SessionParameter.PASSWORD, pass);
+		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
+
+		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
+		Session session = factory.getRepositories(parameter).get(0).createSession();
+
+		Document doc = documentRepository.findByUlisesId(ulisesID);
 
 		if(doc == null)
 			return ResponseEntity.notFound().build();

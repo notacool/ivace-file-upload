@@ -47,4 +47,9 @@ public class DocumentRepository extends GenericRepository {
     public void create(Document document) {
         entityManager.persist(document);
     }
+
+    public void deleteById(Long id){
+        Document document = findByID(id);
+        entityManager.remove(document);
+    }
 }
