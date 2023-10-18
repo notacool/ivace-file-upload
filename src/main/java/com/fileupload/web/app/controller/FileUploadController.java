@@ -327,6 +327,7 @@ public class FileUploadController {
 	}
 
 	@DeleteMapping("/deleteFileByGustavoId")
+	@Transactional(readOnly = false)
 	public ResponseEntity<String> deleteByGustavoID(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("gustavoID") String gustavoID) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
@@ -366,6 +367,7 @@ public class FileUploadController {
 	}
 
 	@DeleteMapping("/deleteFileByUlisesId")
+	@Transactional(readOnly = false)
 	public ResponseEntity<String> deleteByUlisesID(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("ulisesID") String ulisesID) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
