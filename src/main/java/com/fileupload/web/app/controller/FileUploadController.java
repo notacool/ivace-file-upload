@@ -85,6 +85,14 @@ public class FileUploadController {
 	@Value("${alfresco.url}")
 	private String url;
 
+	private String getCmisUrl() {
+		return url + "/alfresco/api/-default-/public/cmis/versions/1.1/atom";
+	}
+
+	private String getRestUrl() {
+		return url + "/alfresco/api/-default-/public/alfresco/versions/1/nodes";
+	}
+
 	@Value("${alfresco.documentLibrary}")
 	private String documentLibrary;
 
@@ -147,7 +155,7 @@ public class FileUploadController {
 			// Credenciales del usuario y url de conexión
 			parameter.put(SessionParameter.USER, user);
 			parameter.put(SessionParameter.PASSWORD, pass);
-			parameter.put(SessionParameter.ATOMPUB_URL, url);
+			parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 			parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 			// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
@@ -187,7 +195,7 @@ public class FileUploadController {
 				Document doc = documentRepository.findByGustavoID(gustavoId);
 
 				if (doc != null) {
-					String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
+					String url = this.getRestUrl() + "/"
 							+ folder.getId() + "/secondary-children";
 					HttpClient client = HttpClient.newHttpClient();
 					HttpHeaders headers = new HttpHeaders();
@@ -218,7 +226,7 @@ public class FileUploadController {
 			} else if (ulisesId != "" && ulisesId != null) {
 				Document doc = documentRepository.findByUlisesId(ulisesId);
 				if (doc != null) {
-					String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
+					String url = this.getRestUrl() + "/"
 							+ folder.getId() + "/targets";
 					HttpClient client = HttpClient.newHttpClient();
 					HttpHeaders headers = new HttpHeaders();
@@ -256,7 +264,9 @@ public class FileUploadController {
 
 	@GetMapping("/getByGustavo")
 	@ResponseBody
-	public ResponseEntity<byte[]> getByGustavoId(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("gustavoID") String gustavoID) {
+	public ResponseEntity<byte[]> getByGustavoId(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("gustavoID") String gustavoID) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -267,7 +277,7 @@ public class FileUploadController {
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 		// Creamos la sesión
@@ -275,11 +285,11 @@ public class FileUploadController {
 
 		Document doc = documentRepository.findByGustavoID(gustavoID);
 
-		if(doc == null)
+		if (doc == null)
 			return ResponseEntity.notFound().build();
-		else{
-			String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
-				+ doc.getAlfrescoId() + "/content?attachment=true";
+		else {
+			String url = this.getRestUrl() + "/"
+					+ doc.getAlfrescoId() + "/content?attachment=true";
 			RestTemplate restTemplate = new RestTemplate();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setBasicAuth(user, pass);
@@ -292,7 +302,9 @@ public class FileUploadController {
 
 	@GetMapping("/getByUlises")
 	@ResponseBody
-	public ResponseEntity<byte[]> getByUlisesId(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("ulisesID") String ulisesID) {
+	public ResponseEntity<byte[]> getByUlisesId(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("ulisesID") String ulisesID) {
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -303,7 +315,7 @@ public class FileUploadController {
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
@@ -311,11 +323,11 @@ public class FileUploadController {
 
 		Document doc = documentRepository.findByUlisesId(ulisesID);
 
-		if(doc == null)
+		if (doc == null)
 			return ResponseEntity.notFound().build();
-		else{
-			String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
-				+ doc.getAlfrescoId() + "/content?attachment=true";
+		else {
+
+			String url = this.getRestUrl() + "/" + doc.getAlfrescoId() + "/content?attachment=true";
 			RestTemplate restTemplate = new RestTemplate();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setBasicAuth(user, pass);
@@ -328,7 +340,9 @@ public class FileUploadController {
 
 	@DeleteMapping("/deleteFileByGustavoId")
 	@Transactional(readOnly = false)
-	public ResponseEntity<String> deleteByGustavoID(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("gustavoID") String gustavoID) {
+	public ResponseEntity<String> deleteByGustavoID(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("gustavoID") String gustavoID) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -340,7 +354,7 @@ public class FileUploadController {
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
@@ -348,18 +362,19 @@ public class FileUploadController {
 
 		Document doc = documentRepository.findByGustavoID(gustavoID);
 
-		if(doc == null)
+		if (doc == null)
 			return ResponseEntity.notFound().build();
-		else{
-			String requestUrl = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
-				+ doc.getAlfrescoId();
+		else {
+			String requestUrl = this.getRestUrl() + "/"
+					+ doc.getAlfrescoId();
 			RestTemplate restTemplate = new RestTemplate();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setBasicAuth(user, pass);
 			headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 			HttpEntity<String> entity = new HttpEntity<>(headers);
-			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity, String.class);
-			if (response.getStatusCode() == HttpStatus.NO_CONTENT){
+			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity,
+					String.class);
+			if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
 				documentRepository.deleteById(doc.getId());
 			}
 			return response;
@@ -368,7 +383,9 @@ public class FileUploadController {
 
 	@DeleteMapping("/deleteFileByUlisesId")
 	@Transactional(readOnly = false)
-	public ResponseEntity<String> deleteByUlisesID(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("ulisesID") String ulisesID) {
+	public ResponseEntity<String> deleteByUlisesID(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("ulisesID") String ulisesID) {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -380,7 +397,7 @@ public class FileUploadController {
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
@@ -388,18 +405,19 @@ public class FileUploadController {
 
 		Document doc = documentRepository.findByUlisesId(ulisesID);
 
-		if(doc == null)
+		if (doc == null)
 			return ResponseEntity.notFound().build();
-		else{
-			String requestUrl = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
+		else {
+			String requestUrl = this.getRestUrl() + "/"
 					+ doc.getAlfrescoId();
 			RestTemplate restTemplate = new RestTemplate();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setBasicAuth(user, pass);
 			headers.setAccept(Collections.singletonList(MediaType.APPLICATION_OCTET_STREAM));
 			HttpEntity<String> entity = new HttpEntity<>(headers);
-			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity, String.class);
-			if (response.getStatusCode() == HttpStatus.NO_CONTENT){
+			ResponseEntity<String> response = restTemplate.exchange(requestUrl, HttpMethod.DELETE, entity,
+					String.class);
+			if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
 				documentRepository.deleteById(doc.getId());
 			}
 			return response;
@@ -407,7 +425,11 @@ public class FileUploadController {
 	}
 
 	@PutMapping("/updateByGustavo")
-	public ResponseEntity<byte[]> updateGustavoFile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("gustavoID") String gustavoID, @RequestHeader("name") String name, @RequestHeader("title") String title, @RequestHeader("description") String description) throws IOException, InterruptedException{
+	public ResponseEntity<byte[]> updateGustavoFile(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("gustavoID") String gustavoID, @RequestHeader("name") String name,
+			@RequestHeader("title") String title, @RequestHeader("description") String description)
+			throws IOException, InterruptedException {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -419,7 +441,7 @@ public class FileUploadController {
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
@@ -427,20 +449,20 @@ public class FileUploadController {
 
 		Document doc = documentRepository.findByGustavoID(gustavoID);
 
-		if(doc == null)
+		if (doc == null)
 			return ResponseEntity.notFound().build();
-		else{
-			String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
+		else {
+			String url = this.getRestUrl() + "/"
 					+ doc.getAlfrescoId() + "/";
 			HttpClient client = HttpClient.newHttpClient();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setBasicAuth(user, pass);
 			JSONObject properties = new JSONObject();
-				properties.put("cm:title", title);
-				properties.put("cm:description", description);
+			properties.put("cm:title", title);
+			properties.put("cm:description", description);
 			JSONObject jsonNode = new JSONObject();
-				jsonNode.put("name", name);
-				jsonNode.put("properties", properties);
+			jsonNode.put("name", name);
+			jsonNode.put("properties", properties);
 			HttpRequest request = HttpRequest.newBuilder()
 					.uri(URI.create(url))
 					.PUT(HttpRequest.BodyPublishers.ofString(jsonNode.toString()))
@@ -456,7 +478,11 @@ public class FileUploadController {
 	}
 
 	@PutMapping("/updateByUlises")
-	public ResponseEntity<byte[]> updateUlisesFile(@RequestHeader(value = "Authorization", required = false) String authorizationHeader, @RequestHeader("ulisesID") String ulisesID, @RequestHeader("name") String name, @RequestHeader("title") String title, @RequestHeader("description") String description) throws IOException, InterruptedException{
+	public ResponseEntity<byte[]> updateUlisesFile(
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+			@RequestHeader("ulisesID") String ulisesID, @RequestHeader("name") String name,
+			@RequestHeader("title") String title, @RequestHeader("description") String description)
+			throws IOException, InterruptedException {
 
 		if (!JwtUtils.verifyToken(authorizationHeader)) {
 			System.out.println("Invalid JWT");
@@ -468,7 +494,7 @@ public class FileUploadController {
 		// Credenciales del usuario y url de conexión
 		parameter.put(SessionParameter.USER, user);
 		parameter.put(SessionParameter.PASSWORD, pass);
-		parameter.put(SessionParameter.ATOMPUB_URL, url);
+		parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
 		parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
 		// Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
@@ -476,20 +502,20 @@ public class FileUploadController {
 
 		Document doc = documentRepository.findByUlisesId(ulisesID);
 
-		if(doc == null)
+		if (doc == null)
 			return ResponseEntity.notFound().build();
-		else{
-			String url = "https://ivace.notacool.com/alfresco/api/-default-/public/alfresco/versions/1/nodes/"
+		else {
+			String url = this.getRestUrl() + "/"
 					+ doc.getAlfrescoId() + "/";
 			HttpClient client = HttpClient.newHttpClient();
 			HttpHeaders headers = new HttpHeaders();
 			headers.setBasicAuth(user, pass);
 			JSONObject properties = new JSONObject();
-				properties.put("cm:title", title);
-				properties.put("cm:description", description);
+			properties.put("cm:title", title);
+			properties.put("cm:description", description);
 			JSONObject jsonNode = new JSONObject();
-				jsonNode.put("name", name);
-				jsonNode.put("properties", properties);
+			jsonNode.put("name", name);
+			jsonNode.put("properties", properties);
 			HttpRequest request = HttpRequest.newBuilder()
 					.uri(URI.create(url))
 					.PUT(HttpRequest.BodyPublishers.ofString(jsonNode.toString()))
