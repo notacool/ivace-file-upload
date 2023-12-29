@@ -31,6 +31,10 @@ public class FolderController {
     @Value("${alfresco.url}")
     private String url;
 
+	private String getCmisUrl() {
+		return url + "/alfresco/api/-default-/public/cmis/versions/1.1/atom";
+	}
+
     @Value("${alfresco.documentLibrary}")
     private String documentLibrary;
 
@@ -46,7 +50,7 @@ public class FolderController {
         // Credenciales del usuario y url de conexión
         parameter.put(SessionParameter.USER, user);
         parameter.put(SessionParameter.PASSWORD, pass);
-        parameter.put(SessionParameter.ATOMPUB_URL, url);
+        parameter.put(SessionParameter.ATOMPUB_URL, this.getCmisUrl());
         parameter.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
 
         // Creamos la sesión y cogemos la carpeta raíz del árbol de directorios
