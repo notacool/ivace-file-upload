@@ -13,7 +13,6 @@ services:
       - ${MYSQL_PORT}:3306
     networks:
       - app-network
-  
   file-upload:
     restart: always
     image: file-upload:latest

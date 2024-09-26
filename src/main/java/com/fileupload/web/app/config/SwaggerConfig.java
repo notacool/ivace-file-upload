@@ -27,9 +27,6 @@ public class SwaggerConfig {
 	    private ApiInfo apiInfo() {
 	        return new ApiInfoBuilder().title("REST API")
 	                .description("API REST Backend Gestor Documental IVACE").termsOfServiceUrl("")
-//	                .contact(new Contact("", "", ""))
-//	                .license("")
-//	                .licenseUrl("")
 	                .version(ver)
 	                .build();
 	    }
