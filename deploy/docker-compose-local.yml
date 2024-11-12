@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - ${MYSQL_PORT}:3306
+    networks:
+      - app-network
+  
+  file-upload:
+    restart: always
+    build:
+      context: ..  # Path to the Dockerfile
+    
+    image: file-upload:latest
+    environment:
+      - MYSQL_HOST=mysql
+    ports:
+      - "${FILEUPLOAD_PORT}:8080"
+    volumes:
+    - type: bind
+      target: /app/src/main/resources/application.properties
+      source: ./conf/backend/application.properties
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  mysql-data:
